@@ -34,6 +34,7 @@ import java.beans.PropertyChangeListener;
 import java.beans.XMLDecoder;
 import java.beans.XMLEncoder;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.*;

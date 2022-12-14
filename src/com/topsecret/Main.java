@@ -17,7 +17,6 @@ public class Main extends JFrame {
 
     public Main() {
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        Log.setLevel(Log.TRACE);
         try {
             InputStream is = getClass().getClassLoader().getResourceAsStream("logoflo.png");
             this.setIconImage(ImageIO.read(is));
@@ -51,6 +50,12 @@ public class Main extends JFrame {
         } catch (Exception e) {
             // NO OP
         }
+        Log.setLevel(Log.CRITICAL);
+
+        if ((args.length > 0) && ("-tron".equals(args[0]))) {
+            Log.setLevel(Log.TRACE);
+        }
+
         Main frame = new Main();
         frame.toFront();
     }
