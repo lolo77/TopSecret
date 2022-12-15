@@ -34,7 +34,6 @@ import java.beans.PropertyChangeListener;
 import java.beans.XMLDecoder;
 import java.beans.XMLEncoder;
 import java.io.*;
-import java.nio.charset.Charset;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.*;
@@ -279,7 +278,7 @@ public class MainPanel extends JPanel {
     }
 
 
-    private void loadSource(File file, boolean verbose) throws TruncatedBagException {
+    private void loadSource(File file) throws TruncatedBagException {
         Parameters p = buildParams();
 
         SwingUtilities.invokeLater(() -> {
@@ -302,34 +301,28 @@ public class MainPanel extends JPanel {
                 bag = newBag;
                 bag.decryptAll(p);
 
-                if (verbose) {
-                    SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(MainPanel.this,
-                                getString("input.info.found"),
-                                getString("input.title"),
-                                JOptionPane.INFORMATION_MESSAGE);
-                    });
-                }
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(MainPanel.this,
+                            getString("input.info.found"),
+                            getString("input.title"),
+                            JOptionPane.INFORMATION_MESSAGE);
+                });
             }
         } catch (TruncatedBagException e) {
             truncated = true;
         } catch (NoBagException e) {
             // No bag
-            if (verbose) {
-                SwingUtilities.invokeLater(() -> {
-                    JOptionPane.showMessageDialog(MainPanel.this,
-                            getString("input.info.notFound"),
-                            getString("input.title"),
-                            JOptionPane.INFORMATION_MESSAGE);
-                });
-            }
-        } catch (Exception e) {
-            if (verbose) {
+            SwingUtilities.invokeLater(() -> {
                 JOptionPane.showMessageDialog(MainPanel.this,
-                        getString("input.err.file.data", e.getMessage()),
+                        getString("input.info.notFound"),
                         getString("input.title"),
-                        JOptionPane.ERROR_MESSAGE);
-            }
+                        JOptionPane.INFORMATION_MESSAGE);
+            });
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(MainPanel.this,
+                    getString("input.err.file.data", e.getMessage()),
+                    getString("input.title"),
+                    JOptionPane.ERROR_MESSAGE);
         } finally {
             if (fis != null) {
                 try {
@@ -394,7 +387,7 @@ public class MainPanel extends JPanel {
 
         if (res == JFileChooser.APPROVE_OPTION) {
             File file = fileChooser.getSelectedFile();
-            onRefreshImage(file, true);
+            onRefreshImage(file);
         }
     }
 
@@ -415,7 +408,7 @@ public class MainPanel extends JPanel {
     }
 
 
-    public void onRefreshImage(File file, boolean verbose) {
+    public void onRefreshImage(File file) {
         if ((file == null) || (!file.exists()) || (file.isDirectory()))
             return;
 
@@ -450,23 +443,19 @@ public class MainPanel extends JPanel {
                             // NO OP
                         }
                     });
-                    loadSource(file, verbose);
-                    if (verbose) {
-                        cfg.updateLastOpenDir(file);
-                        inputFile = file;
-                    }
+                    loadSource(file);
+                    cfg.updateLastOpenDir(file);
+                    inputFile = file;
                 } catch (Exception e) {
                     SwingUtilities.invokeLater(() -> {
-                        if (verbose) {
-                            String msg = (e.getMessage() != null) ? getString("input.err.file.data", e.getMessage()) : getString("input.err.file.data");
-                            if (e instanceof TruncatedBagException) {
-                                msg = getString("input.err.trunc");
-                            }
-                            JOptionPane.showMessageDialog(MainPanel.this,
-                                    msg,
-                                    getString("input.title"),
-                                    JOptionPane.ERROR_MESSAGE);
+                        String msg = (e.getMessage() != null) ? getString("input.err.file.data", e.getMessage()) : getString("input.err.file.data");
+                        if (e instanceof TruncatedBagException) {
+                            msg = getString("input.err.trunc");
                         }
+                        JOptionPane.showMessageDialog(MainPanel.this,
+                                msg,
+                                getString("input.title"),
+                                JOptionPane.ERROR_MESSAGE);
                     });
                 }
                 SwingUtilities.invokeLater(() -> {
@@ -804,7 +793,7 @@ public class MainPanel extends JPanel {
         btnRefreshImage.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                onRefreshImage(inputFile, true);
+                onRefreshImage(inputFile);
             }
         });
 
@@ -882,7 +871,7 @@ public class MainPanel extends JPanel {
                     List<File> droppedFiles = (List<File>)
                             evt.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
                     if (droppedFiles.size() > 0) {
-                        onRefreshImage(droppedFiles.get(0), true);
+                        onRefreshImage(droppedFiles.get(0));
                         scrollPane.invalidate();
                     }
                 } catch (Exception ex) {
