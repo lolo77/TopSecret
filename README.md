@@ -1,5 +1,5 @@
-# TopSecret (uses SecretLib)
-TopSecret user interface
+# TopSecret
+TopSecret user interface based on SecretLib
 
 Encode your secret data files into images, known as "cover" images.
 
