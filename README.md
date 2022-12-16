@@ -24,4 +24,8 @@ Retrieve your secrets with 2 security factors :
 - **Master password** + **Hash algo** (image en/decoding)
 - **Data password** (data en/decoding)
 
-## Visit the wiki : <https://github.com/lolo77/TopSecret/wiki>
+## Visit the Github Wiki : <https://github.com/lolo77/TopSecret/wiki>
+
+## License
+
+[MIT](http://opensource.org/licenses/MIT)
