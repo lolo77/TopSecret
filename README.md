@@ -3,6 +3,9 @@ TopSecret user interface based on SecretLib
 
 Encode your secret data files into images, known as "cover" images.
 
+## Join us on Telegram
+https://t.me/s/topsecret_projects
+
 ## What to do with it ?
 Store securely...
 - **secret files**
