@@ -18,7 +18,7 @@ public class Main extends JFrame {
     public Main() {
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         try {
-            InputStream is = getClass().getClassLoader().getResourceAsStream("logoflo.png");
+            InputStream is = getClass().getClassLoader().getResourceAsStream("favicon64.png");
             this.setIconImage(ImageIO.read(is));
             is.close();
         } catch (Exception e) {
@@ -45,11 +45,6 @@ public class Main extends JFrame {
 
 
     public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            // NO OP
-        }
         Log.setLevel(Log.CRITICAL);
 
         if ((args.length > 0) && ("-tron".equals(args[0]))) {
