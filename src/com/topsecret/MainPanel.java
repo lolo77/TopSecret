@@ -10,6 +10,7 @@ import com.secretlib.util.HiUtils;
 import com.secretlib.util.Parameters;
 import com.topsecret.model.DataItem;
 import com.topsecret.model.DataModel;
+import com.topsecret.server.DataServer;
 import com.topsecret.util.Config;
 import com.topsecret.util.CoolJTextField;
 import com.topsecret.util.SpringUtilities;
@@ -17,6 +18,8 @@ import com.topsecret.util.Utils;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.filechooser.FileFilter;
@@ -28,12 +31,16 @@ import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.XMLDecoder;
 import java.beans.XMLEncoder;
 import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.*;
@@ -85,9 +92,19 @@ public class MainPanel extends JPanel {
     private int[] spaceCapacity = new int[8];
 
 
+    private DataServer dataServer = null;
+
+
     public MainPanel(JFrame frame) {
         this.frame = frame;
         Arrays.fill(spaceCapacity, 0);
+
+        try {
+            dataServer = new DataServer();
+        }
+        catch (Exception e) {
+            dataServer = null;
+        }
     }
 
 
@@ -647,15 +664,42 @@ public class MainPanel extends JPanel {
         p.setLayout(new BorderLayout());
         JLabel img = new JLabel();
         try {
-            InputStream is = getClass().getClassLoader().getResourceAsStream("logoflo.png");
-            img.setIcon(new ImageIcon(ImageIO.read(is)));
+            InputStream is = getClass().getClassLoader().getResourceAsStream("topsecret_logo.png");
+            img.setIcon(new ImageIcon(ImageIO.read(is).getScaledInstance(200, 200, Image.SCALE_SMOOTH)));
             is.close();
         } catch (IOException e) {
         }
         p.add(img, BorderLayout.WEST);
         String sMsg = getString("about.message");
-        JLabel lblCopy = new JLabel("<html><div style='width:100%;text-align:center'>" + sMsg + "<br/><br/>" + getString("about.author") + " Florent FRADET<br/><br/>" + getString("about.link") + "<br/>https://github.com/lolo77</div></html>");
+        String sHtml = "<html><div style='width:100%;text-align:center'>";
+        sHtml += getString("about.message");
+        sHtml += "<br/><br/>";
+        sHtml += getString("about.author") + " Florent FRADET<br/><a href='mailto:top-secret.dao@ud.me'>top-secret.dao@ud.me</a>";
+        sHtml += "<br/><br/>";
+        sHtml += getString("about.link.github") + "<br/><a href='https://github.com/lolo77'>https://github.com/lolo77</a>";
+        sHtml += "<br/><br/>";
+        sHtml += getString("about.link.site") + "<br/><a href='http://top-secret.dao'>top-secret.dao</a>";
+        sHtml += "<br/><br/>";
+        sHtml += getString("about.link.telegram") + "<br/><a href='https://t.me/s/topsecret_projects'>topsecret_projects</a>";
+        sHtml += "<br/><br/>";
+        sHtml += getString("about.link.paypal") + "<br/><a href='https://www.paypal.com/donate/?hosted_button_id=BVBEEHRLYHFH6'>Paypal</a>";
+        sHtml += "<br/><br/>";
+        sHtml += "</div></html>";
+        JEditorPane lblCopy = new JEditorPane("text/html", sHtml);
         p.add(lblCopy, BorderLayout.CENTER);
+        lblCopy.setEditable(false);
+        lblCopy.addHyperlinkListener(new HyperlinkListener() {
+            @Override
+            public void hyperlinkUpdate(HyperlinkEvent e) {
+                if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                    try {
+                        Desktop.getDesktop().browse(e.getURL().toURI());
+                    } catch (IOException | URISyntaxException ex) {
+                        // NO OP
+                    }
+                }
+            }
+        });
         lblCopy.setFont(getFont().deriveFont(Font.BOLD, 15));
         String s = "Visit *** https://github.com/lolo77 *** for more features !\n\n";
         try {
@@ -893,6 +937,27 @@ public class MainPanel extends JPanel {
         scrollPane.setAlignmentX(Component.CENTER_ALIGNMENT);
         scrollPane.setPreferredSize(new Dimension(230, 100));
 
+        tableData.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    // Get the row and column at the mouse cursor
+                    int row = tableData.rowAtPoint(e.getPoint());
+                    DataItem item = data.getLstItems().get(row);
+                    if ((dataServer != null) && (!item.isEncrypted())) {
+                        try {
+                            ChunkData cd = (ChunkData) bag.findById(item.getChunkDataId());
+                            dataServer.setData(cd.getData());
+                            Desktop.getDesktop().browse(new URI("http://127.0.0.1:" + dataServer.getPort() + "/"));
+                        }
+                        catch (Exception ex) {
+                            // NO OP
+                        }
+                    }
+                }
+            }
+        });
+
         ListSelectionModel selectionModel = tableData.getSelectionModel();
 
         selectionModel.addListSelectionListener(new ListSelectionListener() {
@@ -1013,7 +1078,7 @@ public class MainPanel extends JPanel {
 
 
         try {
-            InputStream is = getClass().getClassLoader().getResourceAsStream("logoflo.png");
+            InputStream is = getClass().getClassLoader().getResourceAsStream("topsecret_logo.png");
             replaceImg(ImageIO.read(is));
             is.close();
             progressStep.setVisible(true);
