@@ -3,9 +3,6 @@ TopSecret user interface based on SecretLib
 
 Encode your secret data files into images, known as "cover" images.
 
-## Join us on Telegram
-https://t.me/s/topsecret_projects
-
 ## What to do with it ?
 Store securely...
 - **secret files**
@@ -28,6 +25,16 @@ Retrieve your secrets with 2 security factors :
 - **Data password** (data en/decoding)
 
 ## Visit the Github Wiki : <https://github.com/lolo77/TopSecret/wiki>
+
+## Join us on Telegram
+https://t.me/s/topsecret_projects
+
+## Visit our decentralized website
+[top-secret.dao](top-secret.dao)
+
+Might need the **Unstoppable Domains** extension
+
+Better use **Brave** or **Opera** navigator!
 
 ## License
 
