@@ -1,0 +1,5 @@
+# Project exclude paths
+/out/
+/META-INF/
+/dist/config.xml
+/config.xml
