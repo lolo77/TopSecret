@@ -24,4 +24,18 @@ Retrieve your secrets with 2 security factors :
 - **Master password** + **Hash algo** (image en/decoding)
 - **Data password** (data en/decoding)
 
-## Visit the wiki : <https://github.com/lolo77/TopSecret/wiki>
+## Visit the Github Wiki : <https://github.com/lolo77/TopSecret/wiki>
+
+## Join us on Telegram
+https://t.me/s/topsecret_projects
+
+## Visit our decentralized website
+[top-secret.dao](top-secret.dao)
+
+Might need the **Unstoppable Domains** extension
+
+Better use **Brave** or **Opera** navigator!
+
+## License
+
+[MIT](http://opensource.org/licenses/MIT)
