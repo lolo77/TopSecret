@@ -19,12 +19,12 @@ public class Main extends JFrame {
 
     private static final Log LOG = new Log(Main.class);
 
+    public static final String VERSION = "1.2.0";
+
     private String inputFile = null;
     private String passM = null;
     private String passD = null;
-
     private String hash = null;
-
     private boolean showDlg = true;
 
     public Main(String[] args) {
@@ -39,7 +39,7 @@ public class Main extends JFrame {
             // NO OP
         }
 
-        setTitle("Top Secret");
+        setTitle("Top Secret - v" + VERSION);
 
         MainPanel mp = new MainPanel(this);
         getContentPane().setLayout(new BorderLayout());
