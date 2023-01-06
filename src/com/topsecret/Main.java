@@ -30,7 +30,7 @@ public class Main extends JFrame {
         MainPanel mp = new MainPanel(this);
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(mp, BorderLayout.CENTER);
-        setSize(350, 560);
+        setSize(450, 560);
         mp.initialize();
         setVisible(true);
 
