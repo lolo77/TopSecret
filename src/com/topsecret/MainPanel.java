@@ -64,6 +64,7 @@ public class MainPanel extends JPanel {
     JButton btnEncode;
     JButton btnDecode;
     JButton btnDelete;
+    JButton btnNew;
 
     JPasswordField passMaster;
     JPasswordField passData;
@@ -1056,8 +1057,7 @@ public class MainPanel extends JPanel {
             public synchronized void drop(DropTargetDropEvent evt) {
                 try {
                     evt.acceptDrop(DnDConstants.ACTION_COPY);
-                    List<File> droppedFiles = (List<File>)
-                            evt.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
+                    List<File> droppedFiles = (List<File>)evt.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
                     addFilesToBag(droppedFiles);
                     refreshView();
                     scrollPane.invalidate();
@@ -1067,42 +1067,40 @@ public class MainPanel extends JPanel {
             }
         });
 
-        tableData.setDefaultRenderer(String.class, new
-
-                DefaultTableCellRenderer() {
-                    @Override
-                    public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
-                                                                   boolean hasFocus, int row, int column) {
-                        Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                        DataItem item = data.getLstItems().get(row);
-                        if (item.isEncrypted()) {
-                            Font f = getFont().deriveFont(Font.ITALIC);
-                            setFont(f);
-                            setForeground(Color.RED);
-                        } else {
-                            setForeground(Color.BLACK);
-                        }
-                        return c;
-                    }
-                });
+        tableData.setDefaultRenderer(String.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                           boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                DataItem item = data.getLstItems().get(row);
+                if (item.isEncrypted()) {
+                    Font f = getFont().deriveFont(Font.ITALIC);
+                    setFont(f);
+                    setForeground(Color.RED);
+                } else {
+                    setForeground(Color.BLACK);
+                }
+                return c;
+            }
+        });
 
         JPanel panelBtn = new JPanel();
-        panelBtn.setLayout(new
-
-                FlowLayout());
+        panelBtn.setLayout(new FlowLayout());
         panelSelect.add(panelBtn);
         panelBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        btnDelete = new
+        btnNew = new JButton(getString("btn.data.new"));
+        panelBtn.add(btnNew);
+        btnNew.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnNew.addActionListener(e -> {
+            handleDoubleClick(-1);
+        });
 
-                JButton(getString("btn.data.delete"));
+        btnDelete = new JButton(getString("btn.data.delete"));
         panelBtn.add(btnDelete);
         btnDelete.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnDelete.setEnabled(false);
-        btnDelete.addActionListener(e ->
-
-        {
-
+        btnDelete.addActionListener(e -> {
             for (int row = 0; row < data.getLstItems().size(); row++) {
                 if (tableData.getSelectionModel().isSelectedIndex(row)) {
                     DataItem d = data.getLstItems().get(row);
@@ -1115,58 +1113,42 @@ public class MainPanel extends JPanel {
             btnDelete.setEnabled(false);
         });
 
-        btnEncode = new
-
-                JButton(getString("btn.encode"));
+        btnEncode = new JButton(getString("btn.encode"));
         panelBtn.add(btnEncode);
         btnEncode.setEnabled(false);
-        btnEncode.addActionListener(new
+        btnEncode.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                onEncode();
+            }
+        });
 
-                                            ActionListener() {
-                                                @Override
-                                                public void actionPerformed(ActionEvent e) {
-                                                    onEncode();
-                                                }
-                                            });
-
-        btnDecode = new
-
-                JButton(getString("btn.decode"));
+        btnDecode = new JButton(getString("btn.decode"));
         panelBtn.add(btnDecode);
         btnDecode.setEnabled(false);
-        btnDecode.addActionListener(new
+        btnDecode.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                onDecode();
+            }
+        });
 
-                                            ActionListener() {
-                                                @Override
-                                                public void actionPerformed(ActionEvent e) {
-                                                    onDecode();
-                                                }
-                                            });
-
-        lblSpaceTotal = new
-
-                JLabel();
+        lblSpaceTotal = new JLabel();
         panelSelect.add(lblSpaceTotal);
         lblSpaceTotal.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        lblSpaceUsed = new
-
-                JLabel();
+        lblSpaceUsed = new JLabel();
         panelSelect.add(lblSpaceUsed);
         lblSpaceUsed.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblSpaceUsed.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
 
 
-        lblSpaceFree = new
-
-                JLabel();
+        lblSpaceFree = new JLabel();
         panelSelect.add(lblSpaceFree);
         lblSpaceFree.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblSpaceFree.setBorder(BorderFactory.createEmptyBorder(2, 0, 5, 0));
 
-        lblAltFact = new
-
-                JLabel();
+        lblAltFact = new JLabel();
         panelSelect.add(lblAltFact);
         lblAltFact.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblAltFact.setOpaque(true);
@@ -1176,17 +1158,13 @@ public class MainPanel extends JPanel {
         panelSelect.add(btnAbout);
         btnAbout.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnAbout.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        btnAbout.setFont(btnAbout.getFont().
-
-                deriveFont(Font.BOLD, 12));
-        btnAbout.addActionListener(new
-
-                                           ActionListener() {
-                                               @Override
-                                               public void actionPerformed(ActionEvent e) {
-                                                   onAbout();
-                                               }
-                                           });
+        btnAbout.setFont(btnAbout.getFont().deriveFont(Font.BOLD, 12));
+        btnAbout.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                onAbout();
+            }
+        });
 
 
         try {
