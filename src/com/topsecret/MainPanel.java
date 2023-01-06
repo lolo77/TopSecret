@@ -7,6 +7,7 @@ import com.secretlib.io.stream.HiDataAbstractOutputStream;
 import com.secretlib.io.stream.HiDataStreamFactory;
 import com.secretlib.model.*;
 import com.secretlib.util.HiUtils;
+import com.secretlib.util.Log;
 import com.secretlib.util.Parameters;
 import com.topsecret.model.DataItem;
 import com.topsecret.model.DataModel;
@@ -29,10 +30,7 @@ import java.awt.datatransfer.DataFlavor;
 import java.awt.dnd.DnDConstants;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -41,6 +39,7 @@ import java.beans.XMLEncoder;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.*;
@@ -53,6 +52,7 @@ import java.util.*;
  */
 public class MainPanel extends JPanel {
 
+    private static final Log LOG = new Log(MainPanel.class);
     private final static int IMAGE_SIZE = 100;
 
     ResourceBundle bundle;
@@ -101,8 +101,7 @@ public class MainPanel extends JPanel {
 
         try {
             dataServer = new DataServer();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             dataServer = null;
         }
     }
@@ -713,7 +712,7 @@ public class MainPanel extends JPanel {
         lbl.setEditable(false);
         scroll.setViewportView(lbl);
 
-        dlg.setSize(600, 600);
+        dlg.setSize(800, 600);
         dlg.toFront();
         dlg.setVisible(true);
     }
@@ -756,6 +755,70 @@ public class MainPanel extends JPanel {
 
         refreshView();
         updateSpace();
+    }
+
+
+    private void handleDoubleClick(int row) {
+        ChunkData _cd = null;
+        if (row < 0) {
+            // Create empty item
+            _cd = new ChunkData();
+            _cd.setName("new" + _cd.getId() + ".txt");
+            bag.addItem(_cd);
+            refreshView();
+        } else {
+            DataItem item = data.getLstItems().get(row);
+            if (!item.isEncrypted()) {
+                // View unencrypted item
+                _cd = (ChunkData) bag.findById(item.getChunkDataId());
+            }
+        }
+        final ChunkData cd = _cd;
+        try {
+            int netLen = cd.getData().length; // Length of the original data
+            boolean bText = cd.getName().toLowerCase().endsWith(".txt");
+            boolean bHtml = cd.getName().toLowerCase().endsWith(".html");
+            if ((netLen < 1024 * 1024) && ((bText) || (bHtml))) {
+                // View small text items (<1MiB) via a non-modal dialog
+                String mime = (bHtml) ? "text/html" : "text/plain";
+                JDialog dlg = new JDialog(frame, cd.getName(), false);
+                dlg.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+                dlg.setLayout(new BorderLayout());
+                JScrollPane scroll = new JScrollPane();
+                dlg.add(scroll, BorderLayout.CENTER);
+                String str = new String(cd.getData(), StandardCharsets.UTF_8);
+                JEditorPane p = new JEditorPane(mime, str);
+                p.setEditable(true);
+                dlg.addWindowListener(new WindowAdapter() {
+                    @Override
+                    public void windowClosing(WindowEvent e) {
+                        // Save the data into the ChunkData
+                        cd.setData(p.getText().getBytes(StandardCharsets.UTF_8));
+                        try {
+                            // No need to use valid credentials
+                            // The goal here is only to compute the cyphered size
+                            cd.encryptData(new Parameters());
+                        } catch (Exception ex) {
+                            LOG.error("handleDoubleClick : Error while encrypting data : " + ex.getMessage());
+                        }
+                        refreshView();
+                    }
+                });
+                scroll.setViewportView(p);
+                dlg.setSize(600, 600);
+                dlg.toFront();
+                dlg.setVisible(true);
+            } else {
+                // View other items via the default navigator
+                // --> avoid writing secret data to a temp file before opening the default app
+                if (dataServer != null) {
+                    dataServer.setData(cd.getData());
+                    Desktop.getDesktop().browse(new URI("http://127.0.0.1:" + dataServer.getPort() + "/"));
+                }
+            }
+        } catch (Exception ex) {
+            LOG.error("handleDoubleClick : " + ex.getMessage());
+        }
     }
 
 
@@ -943,17 +1006,7 @@ public class MainPanel extends JPanel {
                 if (e.getClickCount() == 2) {
                     // Get the row and column at the mouse cursor
                     int row = tableData.rowAtPoint(e.getPoint());
-                    DataItem item = data.getLstItems().get(row);
-                    if ((dataServer != null) && (!item.isEncrypted())) {
-                        try {
-                            ChunkData cd = (ChunkData) bag.findById(item.getChunkDataId());
-                            dataServer.setData(cd.getData());
-                            Desktop.getDesktop().browse(new URI("http://127.0.0.1:" + dataServer.getPort() + "/"));
-                        }
-                        catch (Exception ex) {
-                            // NO OP
-                        }
-                    }
+                    handleDoubleClick(row);
                 }
             }
         });
@@ -984,32 +1037,41 @@ public class MainPanel extends JPanel {
             }
         });
 
-        tableData.setDefaultRenderer(String.class, new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                DataItem item = data.getLstItems().get(row);
-                if (item.isEncrypted()) {
-                    Font f = getFont().deriveFont(Font.ITALIC);
-                    setFont(f);
-                    setForeground(Color.RED);
-                } else {
-                    setForeground(Color.BLACK);
-                }
-                return c;
-            }
-        });
+        tableData.setDefaultRenderer(String.class, new
+
+                DefaultTableCellRenderer() {
+                    @Override
+                    public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                                   boolean hasFocus, int row, int column) {
+                        Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                        DataItem item = data.getLstItems().get(row);
+                        if (item.isEncrypted()) {
+                            Font f = getFont().deriveFont(Font.ITALIC);
+                            setFont(f);
+                            setForeground(Color.RED);
+                        } else {
+                            setForeground(Color.BLACK);
+                        }
+                        return c;
+                    }
+                });
 
         JPanel panelBtn = new JPanel();
-        panelBtn.setLayout(new FlowLayout());
+        panelBtn.setLayout(new
+
+                FlowLayout());
         panelSelect.add(panelBtn);
         panelBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        btnDelete = new JButton(getString("btn.data.delete"));
+        btnDelete = new
+
+                JButton(getString("btn.data.delete"));
         panelBtn.add(btnDelete);
         btnDelete.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnDelete.setEnabled(false);
-        btnDelete.addActionListener(e -> {
+        btnDelete.addActionListener(e ->
+
+        {
 
             for (int row = 0; row < data.getLstItems().size(); row++) {
                 if (tableData.getSelectionModel().isSelectedIndex(row)) {
@@ -1023,42 +1085,58 @@ public class MainPanel extends JPanel {
             btnDelete.setEnabled(false);
         });
 
-        btnEncode = new JButton(getString("btn.encode"));
+        btnEncode = new
+
+                JButton(getString("btn.encode"));
         panelBtn.add(btnEncode);
         btnEncode.setEnabled(false);
-        btnEncode.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                onEncode();
-            }
-        });
+        btnEncode.addActionListener(new
 
-        btnDecode = new JButton(getString("btn.decode"));
+                                            ActionListener() {
+                                                @Override
+                                                public void actionPerformed(ActionEvent e) {
+                                                    onEncode();
+                                                }
+                                            });
+
+        btnDecode = new
+
+                JButton(getString("btn.decode"));
         panelBtn.add(btnDecode);
         btnDecode.setEnabled(false);
-        btnDecode.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                onDecode();
-            }
-        });
+        btnDecode.addActionListener(new
 
-        lblSpaceTotal = new JLabel();
+                                            ActionListener() {
+                                                @Override
+                                                public void actionPerformed(ActionEvent e) {
+                                                    onDecode();
+                                                }
+                                            });
+
+        lblSpaceTotal = new
+
+                JLabel();
         panelSelect.add(lblSpaceTotal);
         lblSpaceTotal.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        lblSpaceUsed = new JLabel();
+        lblSpaceUsed = new
+
+                JLabel();
         panelSelect.add(lblSpaceUsed);
         lblSpaceUsed.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblSpaceUsed.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
 
 
-        lblSpaceFree = new JLabel();
+        lblSpaceFree = new
+
+                JLabel();
         panelSelect.add(lblSpaceFree);
         lblSpaceFree.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblSpaceFree.setBorder(BorderFactory.createEmptyBorder(2, 0, 5, 0));
 
-        lblAltFact = new JLabel();
+        lblAltFact = new
+
+                JLabel();
         panelSelect.add(lblAltFact);
         lblAltFact.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblAltFact.setOpaque(true);
@@ -1068,13 +1146,17 @@ public class MainPanel extends JPanel {
         panelSelect.add(btnAbout);
         btnAbout.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnAbout.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        btnAbout.setFont(btnAbout.getFont().deriveFont(Font.BOLD, 12));
-        btnAbout.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                onAbout();
-            }
-        });
+        btnAbout.setFont(btnAbout.getFont().
+
+                deriveFont(Font.BOLD, 12));
+        btnAbout.addActionListener(new
+
+                                           ActionListener() {
+                                               @Override
+                                               public void actionPerformed(ActionEvent e) {
+                                                   onAbout();
+                                               }
+                                           });
 
 
         try {
@@ -1083,7 +1165,8 @@ public class MainPanel extends JPanel {
             is.close();
             progressStep.setVisible(true);
             progressStep.setText(getString("label.dnd.image"));
-        } catch (IOException e) {
+        } catch (
+                IOException e) {
             e.printStackTrace();
         }
 
