@@ -89,6 +89,8 @@ public class MainPanel extends JPanel {
     private int iBitStart;
     private File inputFile = null;
 
+    private boolean showDlg = true;
+
     private int[] spaceCapacity = new int[8];
 
 
@@ -185,6 +187,21 @@ public class MainPanel extends JPanel {
         return true;
     }
 
+    public void setHashAlgo(String s) {
+
+    }
+
+    public void setPassMaster(String s) {
+        passMaster.setText(s);
+    }
+
+    public void setPassData(String s) {
+        passData.setText(s);
+    }
+
+    public void setShowDlg(boolean b) {
+        showDlg = b;
+    }
 
     private Parameters buildParams() {
         Parameters p = new Parameters();
@@ -317,23 +334,27 @@ public class MainPanel extends JPanel {
                 bag = newBag;
                 bag.decryptAll(p);
 
-                SwingUtilities.invokeLater(() -> {
-                    JOptionPane.showMessageDialog(MainPanel.this,
-                            getString("input.info.found"),
-                            getString("input.title"),
-                            JOptionPane.INFORMATION_MESSAGE);
-                });
+                if (showDlg) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(MainPanel.this,
+                                getString("input.info.found"),
+                                getString("input.title"),
+                                JOptionPane.INFORMATION_MESSAGE);
+                    });
+                }
             }
         } catch (TruncatedBagException e) {
             truncated = true;
         } catch (NoBagException e) {
             // No bag
-            SwingUtilities.invokeLater(() -> {
-                JOptionPane.showMessageDialog(MainPanel.this,
-                        getString("input.info.notFound"),
-                        getString("input.title"),
-                        JOptionPane.INFORMATION_MESSAGE);
-            });
+            if (showDlg) {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(MainPanel.this,
+                            getString("input.info.notFound"),
+                            getString("input.title"),
+                            JOptionPane.INFORMATION_MESSAGE);
+                });
+            }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(MainPanel.this,
                     getString("input.err.file.data", e.getMessage()),
@@ -556,14 +577,15 @@ public class MainPanel extends JPanel {
                                 }
                             }
                         }
-                        final int nb = nbData;
-                        SwingUtilities.invokeLater(() -> {
-                            JOptionPane.showMessageDialog(MainPanel.this,
-                                    getString("decoder.extract", nb, file.getAbsolutePath()),
-                                    getString("decoder.success"),
-                                    JOptionPane.INFORMATION_MESSAGE);
-                        });
-
+                        if (showDlg) {
+                            final int nb = nbData;
+                            SwingUtilities.invokeLater(() -> {
+                                JOptionPane.showMessageDialog(MainPanel.this,
+                                        getString("decoder.extract", nb, file.getAbsolutePath()),
+                                        getString("decoder.success"),
+                                        JOptionPane.INFORMATION_MESSAGE);
+                            });
+                        }
                     } catch (Exception e) {
                         SwingUtilities.invokeLater(() -> {
                             JOptionPane.showMessageDialog(MainPanel.this,
@@ -821,10 +843,12 @@ public class MainPanel extends JPanel {
         }
     }
 
+    public void setInputImage(File img) {
+        onRefreshImage(img);
+        scrollPane.invalidate();
+    }
 
-    public void initialize() {
-        loadConfig();
-
+    public void initAlgos() {
         String[] tabAlgos = new String[4];
         int idx = 0;
         tabAlgos[idx++] = "MD5";
@@ -849,6 +873,15 @@ public class MainPanel extends JPanel {
             }
         }
 
+        algo = new JComboBox<>(Arrays.copyOfRange(tabAlgos, 0, idx));
+        algo.setSelectedIndex(iSel);
+    }
+
+    public Config getCfg() {
+        return cfg;
+    }
+
+    public void initialize() {
         JPanel credPanel = new JPanel(new SpringLayout());
         add(credPanel);
         JLabel lbAlgo = new JLabel(getString("label.hash"));
@@ -865,10 +898,8 @@ public class MainPanel extends JPanel {
         JLabel lbBE = new JLabel(getString("label.bit.extend"));
         paramPanel.add(lbBE);
 
-
-        algo = new JComboBox<>(Arrays.copyOfRange(tabAlgos, 0, idx));
+        initAlgos();
         credPanel.add(algo);
-        algo.setSelectedIndex(iSel);
         algo.setEditable(true);
         algo.addActionListener(new ActionListener() {
             @Override
@@ -978,8 +1009,7 @@ public class MainPanel extends JPanel {
                     List<File> droppedFiles = (List<File>)
                             evt.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
                     if (droppedFiles.size() > 0) {
-                        onRefreshImage(droppedFiles.get(0));
-                        scrollPane.invalidate();
+                        setInputImage(droppedFiles.get(0));
                     }
                 } catch (Exception ex) {
                     ex.printStackTrace();
