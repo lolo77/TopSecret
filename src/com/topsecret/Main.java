@@ -19,7 +19,7 @@ public class Main extends JFrame {
 
     private static final Log LOG = new Log(Main.class);
 
-    public static final String VERSION = "1.2.0";
+    public static final String VERSION = "1.3.0";
 
     private String inputFile = null;
     private String passM = null;
@@ -105,8 +105,7 @@ public class Main extends JFrame {
     }
 
     public static void main(String[] args) {
-        Log.setLevel(Log.CRITICAL);
-
+        Log.setLevel(Log.WARN);
 
         Main frame = new Main(args);
         frame.toFront();

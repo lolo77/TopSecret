@@ -2,9 +2,7 @@ package com.topsecret;
 
 import com.secretlib.exception.NoBagException;
 import com.secretlib.exception.TruncatedBagException;
-import com.secretlib.io.stream.HiDataAbstractInputStream;
-import com.secretlib.io.stream.HiDataAbstractOutputStream;
-import com.secretlib.io.stream.HiDataStreamFactory;
+import com.secretlib.io.stream.*;
 import com.secretlib.model.*;
 import com.secretlib.util.HiUtils;
 import com.secretlib.util.Log;
@@ -125,6 +123,9 @@ public class MainPanel extends JPanel {
         int iBitEnd = bitExtend.isSelected() ? 7 : iBitStart;
         int cap = 0;
         for (int i = iBitStart; i <= iBitEnd; i++) {
+            if (spaceCapacity[i] == Integer.MAX_VALUE) {
+                return Integer.MAX_VALUE;
+            }
             cap += spaceCapacity[i];
         }
         return cap;
@@ -229,7 +230,7 @@ public class MainPanel extends JPanel {
 
     private void updateSpace() {
         long used = (bag.isEmpty() ? 0 : bag.getLength()); // To avoid displaying the minimal required bytes
-        long total = getSpaceCapacity() / 8; // bytes
+        long total = (getSpaceCapacity() == Integer.MAX_VALUE) ? Integer.MAX_VALUE : getSpaceCapacity() / 8; // bytes
         lblSpaceTotal.setText(getString("output.space.total", total));
         long free = (total - used);
         String s = "";
@@ -475,7 +476,12 @@ public class MainPanel extends JPanel {
                 try {
                     SwingUtilities.invokeLater(() -> {
                         try {
-                            BufferedImage bi = ImageIO.read(file);
+                            File imgFile = file;
+                            HiDataPdfOutputStream pdfIS = new HiDataPdfOutputStream();
+                            if (pdfIS.matches(sExt)) {
+                                imgFile = new File("./res/pdf.png");
+                            }
+                            BufferedImage bi = ImageIO.read(imgFile);
                             replaceImg(bi);
                         } catch (IOException e) {
                             // NO OP
@@ -638,18 +644,23 @@ public class MainPanel extends JPanel {
                         Parameters p = buildParams();
                         String sExt = Utils.getFileExt(inputFile);
                         File fTemp = new File(inputFile.getAbsolutePath() + ".tmp");
+                        File outputFile = new File(inputFile.getAbsolutePath());
+                        fTemp.delete();
+                        if (!inputFile.renameTo(fTemp)) {
+                            throw new RuntimeException("Could not create " + fTemp.getAbsolutePath());
+                        }
                         // in and out must not be the same file or the input file would be squizzed (length set to 0).
-                        FileInputStream fis = new FileInputStream(inputFile);
-                        FileOutputStream fos = new FileOutputStream(fTemp);
+                        FileInputStream fis = new FileInputStream(fTemp);
+                        FileOutputStream fos = new FileOutputStream(outputFile);
                         HiDataAbstractOutputStream out = HiDataStreamFactory.createOutputStream(fis, fos, p, sExt);
                         if (out == null)
                             throw new Exception(getString("encoder.error.ext", sExt));
                         bag.encryptAll(p);
                         out.write(bag.toByteArray());
                         out.close();
-                        inputFile.delete();
-                        fTemp.renameTo(inputFile);
+                        fTemp.delete();
                     } catch (Exception e) {
+                        LOG.error(e.getMessage());
                         SwingUtilities.invokeLater(() -> {
                             JOptionPane.showMessageDialog(MainPanel.this,
                                     getString("encoder.error.tryAgain"),

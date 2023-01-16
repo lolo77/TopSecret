@@ -1,2 +1,3 @@
 Manifest-Version: 1.0
+Class-Path: lib/bcpkix-jdk15on-1.70.jar lib/bcprov-jdk15on-1.70.jar lib/bcutil-jdk15on-1.70.jar lib/commons-7.2.4.jar lib/io-7.2.4.jar lib/kernel-7.2.4.jar lib/slf4j-api-1.7.24.jar lib/slf4j-api-1.7.36.jar lib/slf4j-nop-1.7.24.jar
 Main-Class: com.topsecret.Main

@@ -53,6 +53,7 @@ public class Utils {
             int i = sName.lastIndexOf(".");
             if (i >= 0) {
                 s = sName.substring(i + 1);
+                s = s.toLowerCase();
             }
         }
         return s;
