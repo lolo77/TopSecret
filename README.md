@@ -31,7 +31,7 @@ Retrieve your secrets with 2 security factors :
 https://t.me/s/topsecret_projects
 
 ## Visit our decentralized website
-[top-secret.dao](top-secret.dao)
+[top-secret.dao](http://top-secret.dao/)
 
 Might need the **Unstoppable Domains** extension
 
