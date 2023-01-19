@@ -43,7 +43,7 @@ public class DataItem {
             } catch (Exception e) {
                 // NO OP
             }
-            length = dfd.getLength();
+            length = dfd.getTotalLength();
         }
     }
 
