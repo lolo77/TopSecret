@@ -2,7 +2,10 @@ package com.topsecret;
 
 import com.secretlib.exception.NoBagException;
 import com.secretlib.exception.TruncatedBagException;
-import com.secretlib.io.stream.*;
+import com.secretlib.io.stream.HiDataAbstractInputStream;
+import com.secretlib.io.stream.HiDataAbstractOutputStream;
+import com.secretlib.io.stream.HiDataPdfOutputStream;
+import com.secretlib.io.stream.HiDataStreamFactory;
 import com.secretlib.model.*;
 import com.secretlib.util.HiUtils;
 import com.secretlib.util.Log;
@@ -60,7 +63,8 @@ public class MainPanel extends JPanel {
     JButton btnRefreshImage;
     JButton btnRefreshData;
     JButton btnEncode;
-    JButton btnDecode;
+    JButton btnEncodeTo;
+    JButton btnDecodeTo;
     JButton btnDelete;
     JButton btnNew;
 
@@ -103,6 +107,7 @@ public class MainPanel extends JPanel {
         try {
             dataServer = new DataServer();
         } catch (Exception e) {
+            LOG.warn("Exception while creating dataServer : " + e.getMessage());
             dataServer = null;
         }
     }
@@ -256,7 +261,8 @@ public class MainPanel extends JPanel {
 
         boolean b = ((inputFile != null) && (free >= 0));
         btnEncode.setEnabled(b);
-        btnDecode.setEnabled(b && (hasUnencryptedData()));
+        btnEncodeTo.setEnabled(b);
+        btnDecodeTo.setEnabled(b && (hasUnencryptedData()));
 
         updateAlterationFactor();
     }
@@ -270,7 +276,7 @@ public class MainPanel extends JPanel {
 
             if (EChunk.DATA.equals(df.getType())) {
                 ChunkData dfd = (ChunkData) df;
-                DataItem line = new DataItem(bag, dfd.getName(), dfd.getLength(), dfd.isEncrypted(), dfd.getId());
+                DataItem line = new DataItem(bag, dfd.getName(), dfd.getTotalLength(), dfd.isEncrypted(), dfd.getId());
 
                 data.getLstItems().add(line);
             }
@@ -468,7 +474,8 @@ public class MainPanel extends JPanel {
         btnRefreshData.setEnabled(false);
         btnSelectImage.setEnabled(false);
         btnEncode.setEnabled(false);
-        btnDecode.setEnabled(false);
+        btnEncodeTo.setEnabled(false);
+        btnDecodeTo.setEnabled(false);
         btnDelete.setEnabled(false);
 
         new Thread() {
@@ -548,7 +555,8 @@ public class MainPanel extends JPanel {
             btnSelectImage.setEnabled(false);
             btnRefreshData.setEnabled(false);
             btnEncode.setEnabled(false);
-            btnDecode.setEnabled(false);
+            btnEncodeTo.setEnabled(false);
+            btnDecodeTo.setEnabled(false);
             btnDelete.setEnabled(false);
 
             SwingUtilities.invokeLater(() -> {
@@ -616,20 +624,35 @@ public class MainPanel extends JPanel {
     }
 
 
-    public void onEncode() {
+    public void onEncode(boolean to) {
 
         if (!validateInputs()) {
             return;
         }
 
-        if (inputFile != null) {
+        File file = inputFile;
 
+        if (to) {
+            JFileChooser dirChooser = new JFileChooser();
+            dirChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            dirChooser.setCurrentDirectory(inputFile);
+
+            // Show save file dialog
+            int res = dirChooser.showSaveDialog(this);
+            if (res == JFileChooser.APPROVE_OPTION) {
+                file = dirChooser.getSelectedFile();
+            }
+        }
+
+        if (file != null) {
+            final File fFile = file;
             SwingUtilities.invokeLater(() -> {
                 btnRefreshImage.setEnabled(false);
                 btnSelectImage.setEnabled(false);
                 btnRefreshData.setEnabled(false);
                 btnEncode.setEnabled(false);
-                btnDecode.setEnabled(false);
+                btnEncodeTo.setEnabled(false);
+                btnDecodeTo.setEnabled(false);
                 btnDelete.setEnabled(false);
 
                 progress.setMinimum(0);
@@ -640,14 +663,19 @@ public class MainPanel extends JPanel {
 
             Thread runner = new Thread() {
                 public void run() {
+                    File fTemp = null;
                     try {
                         Parameters p = buildParams();
-                        String sExt = Utils.getFileExt(inputFile);
-                        File fTemp = new File(inputFile.getAbsolutePath() + ".tmp");
-                        File outputFile = new File(inputFile.getAbsolutePath());
-                        fTemp.delete();
-                        if (!inputFile.renameTo(fTemp)) {
-                            throw new RuntimeException("Could not create " + fTemp.getAbsolutePath());
+                        String sExt = Utils.getFileExt(fFile);
+                        File outputFile = new File(fFile.getAbsolutePath());
+                        if (fFile.equals(inputFile)) {
+                            fTemp = new File(fFile.getAbsolutePath() + ".tmp");
+                            fTemp.delete();
+                            if (!fFile.renameTo(fTemp)) {
+                                throw new RuntimeException("Could not create " + fTemp.getAbsolutePath());
+                            }
+                        } else {
+                            fTemp = inputFile;
                         }
                         // in and out must not be the same file or the input file would be squizzed (length set to 0).
                         FileInputStream fis = new FileInputStream(fTemp);
@@ -658,7 +686,6 @@ public class MainPanel extends JPanel {
                         bag.encryptAll(p);
                         out.write(bag.toByteArray());
                         out.close();
-                        fTemp.delete();
                     } catch (Exception e) {
                         LOG.error(e.getMessage());
                         SwingUtilities.invokeLater(() -> {
@@ -667,6 +694,11 @@ public class MainPanel extends JPanel {
                                     getString("encoder.error"),
                                     JOptionPane.ERROR_MESSAGE);
                         });
+                    } finally {
+                        if ((fTemp != null) && (!fTemp.equals(inputFile))) {
+                            fTemp.delete();
+                        }
+                        inputFile = fFile;
                     }
                     SwingUtilities.invokeLater(() -> {
                         progress.setVisible(false);
@@ -992,6 +1024,8 @@ public class MainPanel extends JPanel {
             }
         });
 
+        // Advanced features
+        // TODO : toggle visibility through an "advanced settings" accordion
         paramPanel.setVisible(false);
 
         JPanel panelSelect = new JPanel();
@@ -1068,7 +1102,7 @@ public class MainPanel extends JPanel {
             public synchronized void drop(DropTargetDropEvent evt) {
                 try {
                     evt.acceptDrop(DnDConstants.ACTION_COPY);
-                    List<File> droppedFiles = (List<File>)evt.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
+                    List<File> droppedFiles = (List<File>) evt.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
                     addFilesToBag(droppedFiles);
                     refreshView();
                     scrollPane.invalidate();
@@ -1124,20 +1158,35 @@ public class MainPanel extends JPanel {
             btnDelete.setEnabled(false);
         });
 
+        JPanel panelBtn2 = new JPanel();
+        panelBtn2.setLayout(new BorderLayout(5,5));
+
         btnEncode = new JButton(getString("btn.encode"));
-        panelBtn.add(btnEncode);
+        panelBtn2.add(btnEncode, BorderLayout.NORTH);
         btnEncode.setEnabled(false);
         btnEncode.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                onEncode();
+                onEncode(false);
             }
         });
 
-        btnDecode = new JButton(getString("btn.decode"));
-        panelBtn.add(btnDecode);
-        btnDecode.setEnabled(false);
-        btnDecode.addActionListener(new ActionListener() {
+        btnEncodeTo = new JButton(getString("btn.encode.to"));
+        panelBtn2.add(btnEncodeTo, BorderLayout.SOUTH);
+        btnEncodeTo.setEnabled(false);
+        btnEncodeTo.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                onEncode(true);
+            }
+        });
+
+        panelBtn.add(panelBtn2);
+
+        btnDecodeTo = new JButton(getString("btn.decode"));
+        panelBtn.add(btnDecodeTo);
+        btnDecodeTo.setEnabled(false);
+        btnDecodeTo.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 onDecode();
@@ -1201,6 +1250,19 @@ public class MainPanel extends JPanel {
             cfg = (Config) xd.readObject();
             xd.close();
 
+            // Ensure the frame is visible
+            // (i.e. cfg has coordinates on a disconnected screen on a multiple-screens desktop)
+            boolean bVisible = false;
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            GraphicsDevice[] screens = ge.getScreenDevices();
+            for (GraphicsDevice screen : screens) {
+                Rectangle screenBounds = screen.getDefaultConfiguration().getBounds();
+                bVisible |= screenBounds.contains(cfg.getFrameRect());
+            }
+            if (!bVisible) {
+                // Reset position to main screen
+                cfg.getFrameRect().move(0,0);
+            }
             getParent().getParent().getParent().getParent().setBounds(cfg.getFrameRect());
         } catch (Exception e) {
             // NO OP
