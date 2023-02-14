@@ -624,6 +624,42 @@ public class MainPanel extends JPanel {
     }
 
 
+    public void onExport() {
+        if (!validateInputs()) {
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        if (cfg.getLastOpenDir() != null) {
+            File fDir = new File(cfg.getLastOpenDir());
+            if (fDir.isDirectory()) {
+                fileChooser.setCurrentDirectory(fDir);
+            }
+        }
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+        // Show save file dialog
+        int res = fileChooser.showOpenDialog(this);
+
+        if (res == JFileChooser.APPROVE_OPTION) {
+            File file = fileChooser.getSelectedFile();
+            Parameters p = buildParams();
+            try {
+                FileOutputStream fout = new FileOutputStream(file);
+                bag.encryptAll(p);
+                fout.write(bag.toByteArray());
+                fout.close();
+            } catch (Exception e) {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(MainPanel.this,
+                            getString("export.error.msg", e.getMessage()),
+                            getString("export.error"),
+                            JOptionPane.ERROR_MESSAGE);
+                });
+            }
+        }
+    }
+
     public void onEncode(boolean to) {
 
         if (!validateInputs()) {
@@ -1183,8 +1219,11 @@ public class MainPanel extends JPanel {
 
         panelBtn.add(panelBtn2);
 
+        JPanel panelBtn3 = new JPanel();
+        panelBtn3.setLayout(new BorderLayout(5,5));
+
         btnDecodeTo = new JButton(getString("btn.decode"));
-        panelBtn.add(btnDecodeTo);
+        panelBtn3.add(btnDecodeTo, BorderLayout.NORTH);
         btnDecodeTo.setEnabled(false);
         btnDecodeTo.addActionListener(new ActionListener() {
             @Override
@@ -1192,6 +1231,20 @@ public class MainPanel extends JPanel {
                 onDecode();
             }
         });
+
+        JButton btnExport = new JButton(getString("btn.export"));
+        panelBtn3.add(btnExport, BorderLayout.SOUTH);
+        btnExport.setEnabled(true);
+        btnExport.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                onExport();
+            }
+        });
+
+
+        panelBtn.add(panelBtn3);
+
 
         lblSpaceTotal = new JLabel();
         panelSelect.add(lblSpaceTotal);

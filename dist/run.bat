@@ -1,1 +1,1 @@
-java -Dfile.encoding=UTF-8 -jar TopSecret.jar
+java -Dfile.encoding=UTF-8 -jar TopSecret.jar -tron
