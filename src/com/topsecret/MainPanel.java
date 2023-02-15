@@ -897,9 +897,7 @@ public class MainPanel extends JPanel {
                         // Save the data into the ChunkData
                         cd.setData(p.getText().getBytes(StandardCharsets.UTF_8));
                         try {
-                            // No need to use valid credentials
-                            // The goal here is only to compute the cyphered size
-                            cd.encryptData(new Parameters());
+                            bag.encryptAll(buildParams());
                         } catch (Exception ex) {
                             LOG.error("handleDoubleClick : Error while encrypting data : " + ex.getMessage());
                         }
