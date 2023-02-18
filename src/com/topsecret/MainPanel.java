@@ -1180,6 +1180,9 @@ public class MainPanel extends JPanel {
         btnDelete.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnDelete.setEnabled(false);
         btnDelete.addActionListener(e -> {
+            if (tableData.isEditing()) {
+                tableData.editingCanceled(null);
+            }
             for (int row = 0; row < data.getLstItems().size(); row++) {
                 if (tableData.getSelectionModel().isSelectedIndex(row)) {
                     DataItem d = data.getLstItems().get(row);
