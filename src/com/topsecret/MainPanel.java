@@ -639,7 +639,7 @@ public class MainPanel extends JPanel {
         fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
 
         // Show save file dialog
-        int res = fileChooser.showOpenDialog(this);
+        int res = fileChooser.showSaveDialog(this);
 
         if (res == JFileChooser.APPROVE_OPTION) {
             File file = fileChooser.getSelectedFile();
@@ -677,6 +677,8 @@ public class MainPanel extends JPanel {
             int res = dirChooser.showSaveDialog(this);
             if (res == JFileChooser.APPROVE_OPTION) {
                 file = dirChooser.getSelectedFile();
+            } else {
+                return;
             }
         }
 
@@ -1235,7 +1237,7 @@ public class MainPanel extends JPanel {
 
         JButton btnExport = new JButton(getString("btn.export"));
         panelBtn3.add(btnExport, BorderLayout.SOUTH);
-        btnExport.setEnabled(true);
+        btnExport.setVisible(false);
         btnExport.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
