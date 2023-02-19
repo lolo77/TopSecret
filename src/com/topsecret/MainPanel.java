@@ -729,7 +729,7 @@ public class MainPanel extends JPanel {
                         SwingUtilities.invokeLater(() -> {
                             JOptionPane.showMessageDialog(MainPanel.this,
                                     getString("encoder.error.tryAgain"),
-                                    getString("encoder.error"),
+                                    getString("encoder.error", e.getMessage()),
                                     JOptionPane.ERROR_MESSAGE);
                         });
                     } finally {
