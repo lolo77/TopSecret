@@ -1,4 +1,4 @@
-package com.secretlib.plugin;
+package com.topsecret.plugin;
 
 public interface CodecPlugin {
     void startCodec();
