@@ -82,6 +82,9 @@ public class MainPanel extends JPanel {
     JProgressBar progress;
     JLabel progressStep;
 
+    JComboBox<String> cmbDecode;
+    JComboBox<String> cmbEncode;
+
     JScrollPane scrollPane;
     JTable tableData;
     private final DataModel data = new DataModel(this);
@@ -210,7 +213,7 @@ public class MainPanel extends JPanel {
         showDlg = b;
     }
 
-    private Parameters buildParams() {
+    private Parameters buildParams(boolean encode) {
         Parameters p = new Parameters();
         ProgressCB progCB = new ProgressCB();
         p.setProgressCallBack(progCB);
@@ -219,6 +222,7 @@ public class MainPanel extends JPanel {
         p.setHashAlgo((String) algo.getSelectedItem());
         p.setBitStart(iBitStart);
         p.setAutoExtendBit(bitExtend.isSelected());
+        p.setCodec((String)(encode ? cmbEncode.getSelectedItem() : cmbDecode.getSelectedItem()));
 
         return p;
     }
@@ -320,7 +324,7 @@ public class MainPanel extends JPanel {
 
 
     private void loadSource(File file) throws TruncatedBagException {
-        Parameters p = buildParams();
+        Parameters p = buildParams(false);
 
         SwingUtilities.invokeLater(() -> {
             progress.setMinimum(0);
@@ -522,7 +526,7 @@ public class MainPanel extends JPanel {
     }
 
     public void onRefreshData() {
-        Parameters p = buildParams();
+        Parameters p = buildParams(false);
         try {
             bag.decryptAll(p);
         } catch (Exception e) {
@@ -552,7 +556,7 @@ public class MainPanel extends JPanel {
 
         if (res == JFileChooser.APPROVE_OPTION) {
             File file = dirChooser.getSelectedFile();
-            Parameters p = buildParams();
+            Parameters p = buildParams(false);
 
             btnRefreshImage.setEnabled(false);
             btnSelectImage.setEnabled(false);
@@ -646,7 +650,7 @@ public class MainPanel extends JPanel {
 
         if (res == JFileChooser.APPROVE_OPTION) {
             File file = fileChooser.getSelectedFile();
-            Parameters p = buildParams();
+            Parameters p = buildParams(true);
             try {
                 FileOutputStream fout = new FileOutputStream(file);
                 bag.encryptAll(p);
@@ -706,7 +710,7 @@ public class MainPanel extends JPanel {
                 public void run() {
                     File fTemp = null;
                     try {
-                        Parameters p = buildParams();
+                        Parameters p = buildParams(true);
                         String sExt = Utils.getFileExt(fFile);
                         File outputFile = new File(fFile.getAbsolutePath());
                         if (fFile.equals(inputFile)) {
@@ -826,7 +830,7 @@ public class MainPanel extends JPanel {
 
 
     private void addFilesToBag(List<File> lst) {
-        Parameters p = buildParams();
+        Parameters p = buildParams(true);
         StringBuilder sb = new StringBuilder();
 
         for (File f : lst) {
@@ -902,7 +906,7 @@ public class MainPanel extends JPanel {
                         // Save the data into the ChunkData
                         cd.setData(p.getText().getBytes(StandardCharsets.UTF_8));
                         try {
-                            bag.encryptAll(buildParams());
+                            bag.encryptAll(buildParams(true));
                         } catch (Exception ex) {
                             LOG.error("handleDoubleClick : Error while encrypting data : " + ex.getMessage());
                         }
@@ -964,7 +968,16 @@ public class MainPanel extends JPanel {
         return cfg;
     }
 
+
     public void initialize() {
+        JPanel codecDecodePanel = new JPanel();
+        codecDecodePanel.setLayout(new BoxLayout(codecDecodePanel, BoxLayout.X_AXIS));
+        JLabel lblCodecDecoder = new JLabel(getString("lbl.codec.decode"));
+        codecDecodePanel.add(lblCodecDecoder);
+        cmbDecode = new JComboBox<>(Utils.asArray(HiDataStreamFactory.getListCodecsInput()));
+        codecDecodePanel.add(cmbDecode);
+        add(codecDecodePanel);
+
         JPanel credPanel = new JPanel(new SpringLayout());
         add(credPanel);
         JLabel lbAlgo = new JLabel(getString("label.hash"));
@@ -1069,8 +1082,7 @@ public class MainPanel extends JPanel {
 
         JPanel panelSelect = new JPanel();
         add(panelSelect);
-        BoxLayout bly = new BoxLayout(panelSelect, BoxLayout.Y_AXIS);
-        panelSelect.setLayout(bly);
+        panelSelect.setLayout(new BoxLayout(panelSelect, BoxLayout.Y_AXIS));
 
 
         progress = new JProgressBar();
@@ -1167,6 +1179,14 @@ public class MainPanel extends JPanel {
                 return c;
             }
         });
+
+        JPanel codecEncodePanel = new JPanel();
+        codecEncodePanel.setLayout(new BoxLayout(codecEncodePanel, BoxLayout.X_AXIS));
+        JLabel lblCodecEncoder = new JLabel(getString("lbl.codec.encode"));
+        codecEncodePanel.add(lblCodecEncoder);
+        cmbEncode = new JComboBox<>(Utils.asArray(HiDataStreamFactory.getListCodecsOutput()));
+        codecEncodePanel.add(cmbEncode);
+        panelSelect.add(codecEncodePanel);
 
         JPanel panelBtn = new JPanel();
         panelBtn.setLayout(new FlowLayout());

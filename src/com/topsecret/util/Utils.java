@@ -6,6 +6,7 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Set;
 
 /**
  * @author Florent FRADET
@@ -65,5 +66,14 @@ public class Utils {
             return "";
         }
         return name.substring(0, idxLastDot);
+    }
+
+    public static String[] asArray(Set<String> set) {
+        String[] tab = new String[set.size()];
+        int i = 0;
+        for (String s : set) {
+            tab[i++] = s;
+        }
+        return tab;
     }
 }
