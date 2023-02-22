@@ -1,6 +1,7 @@
 package com.topsecret;
 
 import com.secretlib.util.Log;
+import com.topsecret.plugin.PluginManager;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -28,7 +29,6 @@ public class Main extends JFrame {
     private boolean showDlg = true;
 
     public Main(String[] args) {
-        parseArgs(args);
 
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         try {
@@ -46,6 +46,9 @@ public class Main extends JFrame {
         getContentPane().add(mp, BorderLayout.CENTER);
         setSize(450, 560);
         mp.loadConfig();
+        parseArgs(args);
+        PluginManager.getInstance().discoverPlugins();
+        PluginManager.getInstance().startAll();
         if (hash != null) {
             mp.getCfg().setAlgo(hash);
         }
@@ -67,6 +70,7 @@ public class Main extends JFrame {
             @Override
             public void windowClosing(WindowEvent e) {
                 mp.saveConfig();
+                PluginManager.getInstance().stopAll();
                 e.getWindow().dispose();
             }
         });
@@ -94,8 +98,14 @@ public class Main extends JFrame {
                     if (iter.hasNext()) {
                         passD = iter.next();
                     }
+                } else if ("-plug".equals(arg)) {
+                    if (iter.hasNext()) {
+                        PluginManager.getInstance().loadPlugin(iter.next());
+                    }
                 } else {
-                    LOG.error("invalid arg : " + arg);
+                    if (!PluginManager.getInstance().consumeArg(iter)) {
+                        LOG.warn("invalid arg : " + arg);
+                    }
                 }
             } else {
                 inputFile = arg;
@@ -104,8 +114,12 @@ public class Main extends JFrame {
 
     }
 
+
+
+
+
     public static void main(String[] args) {
-        Log.setLevel(Log.WARN);
+        Log.setLevel(Log.INFO);
 
         Main frame = new Main(args);
         frame.toFront();

@@ -59,4 +59,11 @@ public class Utils {
         return s;
     }
 
+    public static String removeExt(String name) {
+        int idxLastDot = name.lastIndexOf(".");
+        if (idxLastDot < 0) {
+            return "";
+        }
+        return name.substring(0, idxLastDot);
+    }
 }
