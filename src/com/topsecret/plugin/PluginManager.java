@@ -74,8 +74,7 @@ public class PluginManager {
                 LOG.warn("Attempted to load " + jarName + " as a plugin but it does not extend the Pluggable interface.");
             }
         } catch (Exception e) {
-            LOG.error(e.getMessage());
-            e.printStackTrace();
+            LOG.debug(e.getMessage());
         }
     }
 

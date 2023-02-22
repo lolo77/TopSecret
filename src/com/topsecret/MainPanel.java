@@ -405,8 +405,11 @@ public class MainPanel extends JPanel {
         }
         // Set extension filter
         fileChooser.setAcceptAllFileFilterUsed(true);
+        LOG.debug("getSupportedInputExtensions");
         List<String> lstExts = HiDataStreamFactory.getSupportedInputExtensions();
+        LOG.debug("join");
         String sExts = String.join(", ", lstExts);
+        LOG.debug("setFileFilter");
         fileChooser.setFileFilter(new FileFilter() {
             @Override
             public boolean accept(File f) {
@@ -417,7 +420,7 @@ public class MainPanel extends JPanel {
                 if (ext == null)
                     return false;
                 ext = ext.toLowerCase(Locale.ROOT);
-
+                LOG.debug("contains");
                 return lstExts.contains(ext);
             }
 
