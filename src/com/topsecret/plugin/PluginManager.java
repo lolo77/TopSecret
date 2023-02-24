@@ -9,6 +9,7 @@ import com.topsecret.util.Utils;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
@@ -38,7 +39,20 @@ public class PluginManager {
 
 
     public void discoverPlugins() {
-        File f = new File(".");
+        String jarPath = ".";
+        try {
+            jarPath = PluginManager.class
+                    .getProtectionDomain()
+                    .getCodeSource()
+                    .getLocation()
+                    .toURI()
+                    .getPath();
+
+        } catch (URISyntaxException e) {
+            // No op
+        }
+
+        File f = new File(jarPath);
         File[] jars = f.listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
@@ -54,7 +68,7 @@ public class PluginManager {
 
     public void loadPlugin(String jarName) {
         try {
-            LOG.info("Loading plugin " + jarName);
+            LOG.info("Found jar file : " + jarName);
 
             File f = new File(jarName);
             URLClassLoader child = new URLClassLoader(
@@ -69,6 +83,7 @@ public class PluginManager {
 
             Object instance = classToLoad.getDeclaredConstructor().newInstance();
             if (instance instanceof Pluggable) {
+                LOG.info("Pluggable interface found : " + fullClassName);
                 plugins.add((Pluggable) instance);
             } else {
                 LOG.warn("Attempted to load " + jarName + " as a plugin but it does not extend the Pluggable interface.");

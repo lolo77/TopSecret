@@ -10,13 +10,15 @@ import com.secretlib.model.*;
 import com.secretlib.util.HiUtils;
 import com.secretlib.util.Log;
 import com.secretlib.util.Parameters;
+import com.topsecret.event.TopEventBase;
+import com.topsecret.event.TopEventDispatcher;
+import com.topsecret.event.TopEventEvaluateSpace;
+import com.topsecret.event.TopEventListener;
 import com.topsecret.model.DataItem;
 import com.topsecret.model.DataModel;
+import com.topsecret.plugin.PluginManager;
 import com.topsecret.server.DataServer;
-import com.topsecret.util.Config;
-import com.topsecret.util.CoolJTextField;
-import com.topsecret.util.SpringUtilities;
-import com.topsecret.util.Utils;
+import com.topsecret.util.*;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -51,7 +53,7 @@ import java.util.*;
  * <p>
  * Main Swing GUI class
  */
-public class MainPanel extends JPanel {
+public class MainPanel extends JPanel implements TopEventListener {
 
     private static final Log LOG = new Log(MainPanel.class);
     private final static int IMAGE_SIZE = 100;
@@ -291,11 +293,68 @@ public class MainPanel extends JPanel {
         scrollPane.repaint();
     }
 
+    private void onEvaluateSpace(TopEventEvaluateSpace e) {
+        if (e.getInputFile() == null) {
+            // No op
+            return;
+        }
+        Parameters p = buildParams(true);
+        p.setCodec(e.getCodec());
+        ProgressCBLastMsg cb = new ProgressCBLastMsg();
+        p.setProgressCallBack(cb);
+        try {
+            OutputStream out = new NullOutputStream();
+            HiDataAbstractOutputStream os = HiDataStreamFactory.createOutputStream(new FileInputStream(e.getInputFile()), out, p);
+            os.write(0);
+            os.close();
+            spaceCapacity = cb.getLastMsgCapacity().getNbBitsTotals();
+            updateSpace();
+        } catch (Exception ex) {
+            LOG.debug("onEvaluateSpace : " + ex.getMessage());
+        }
+    }
 
-    private class ProgressCB implements IProgressCallback {
+    @Override
+    public void processTopEvent(TopEventBase e) {
+        if (e instanceof TopEventEvaluateSpace) {
+            PluginManager.getInstance().dispatchPluginEvent(e);
+            onEvaluateSpace((TopEventEvaluateSpace) e);
+        }
+    }
+
+    private void selectOutputCodec(String codec) {
+        cmbEncode.getModel().setSelectedItem(codec);
+    }
+
+    private class ProgressCBLastMsg implements IProgressCallback {
+
+        private ProgressMessage lastMsg = null;
+        private ProgressMessage lastMsgCapacity = null;
+
+
+        public ProgressCBLastMsg() {
+        }
+
+        @Override
+        public void update(ProgressMessage progressMessage) {
+            lastMsg = progressMessage;
+            if ((progressMessage.getNbBitsTotals() != null) && (progressMessage.getNbBitsTotal(0) > 0)) {
+                lastMsgCapacity = progressMessage;
+            }
+        }
+
+        public ProgressMessage getLastMsg() {
+            return lastMsg;
+        }
+
+        public ProgressMessage getLastMsgCapacity() {
+            return lastMsgCapacity;
+        }
+    }
+
+    private class ProgressCB extends ProgressCBLastMsg {
 
         private final HashMap<ProgressStepEnum, String> msgs = new HashMap<>();
-        private ProgressMessage lastMsg = null;
 
         public ProgressCB() {
             msgs.put(ProgressStepEnum.DECODE, getString("process.decode"));
@@ -306,7 +365,7 @@ public class MainPanel extends JPanel {
 
         @Override
         public void update(ProgressMessage progressMessage) {
-            lastMsg = progressMessage;
+            super.update(progressMessage);
 
             SwingUtilities.invokeLater(() -> {
                 if (!progress.isVisible()) {
@@ -317,9 +376,6 @@ public class MainPanel extends JPanel {
             });
         }
 
-        public ProgressMessage getLastMsg() {
-            return lastMsg;
-        }
     }
 
 
@@ -340,6 +396,7 @@ public class MainPanel extends JPanel {
             HiDataAbstractInputStream hdis = HiDataStreamFactory.createInputStream(fis, p);
             if (hdis == null)
                 throw new Exception(getString("input.err.file.format", file.getName()));
+            selectOutputCodec(hdis.getOutputCodecName());
             HiDataBag newBag = hdis.getBag();
             if (!newBag.isEmpty()) {
                 // Replace the displayed bag by the one found in the source image
@@ -384,8 +441,8 @@ public class MainPanel extends JPanel {
         SwingUtilities.invokeLater(() -> {
             refreshView();
             ProgressCB progCB = (ProgressCB) p.getProgressCallBack();
-            if (progCB.getLastMsg() != null) {
-                spaceCapacity = progCB.getLastMsg().getNbBitsTotals();
+            if (progCB.getLastMsgCapacity() != null) {
+                spaceCapacity = progCB.getLastMsgCapacity().getNbBitsTotals();
                 updateSpace();
             }
             progress.setVisible(false);
@@ -409,11 +466,8 @@ public class MainPanel extends JPanel {
         }
         // Set extension filter
         fileChooser.setAcceptAllFileFilterUsed(true);
-        LOG.debug("getSupportedInputExtensions");
         List<String> lstExts = HiDataStreamFactory.getSupportedInputExtensions();
-        LOG.debug("join");
         String sExts = String.join(", ", lstExts);
-        LOG.debug("setFileFilter");
         fileChooser.setFileFilter(new FileFilter() {
             @Override
             public boolean accept(File f) {
@@ -424,7 +478,6 @@ public class MainPanel extends JPanel {
                 if (ext == null)
                     return false;
                 ext = ext.toLowerCase(Locale.ROOT);
-                LOG.debug("contains");
                 return lstExts.contains(ext);
             }
 
@@ -545,9 +598,7 @@ public class MainPanel extends JPanel {
         JFileChooser dirChooser = new JFileChooser();
         if (cfg.getLastOpenDir() != null) {
             File fDir = new File(cfg.getLastOpenDir());
-            if (fDir.isDirectory()) {
-                dirChooser.setCurrentDirectory(fDir);
-            }
+            dirChooser.setCurrentDirectory(fDir);
         }
         dirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 
@@ -639,9 +690,7 @@ public class MainPanel extends JPanel {
         JFileChooser fileChooser = new JFileChooser();
         if (cfg.getLastOpenDir() != null) {
             File fDir = new File(cfg.getLastOpenDir());
-            if (fDir.isDirectory()) {
-                fileChooser.setCurrentDirectory(fDir);
-            }
+            fileChooser.setCurrentDirectory(fDir);
         }
         fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
 
@@ -676,14 +725,40 @@ public class MainPanel extends JPanel {
         File file = inputFile;
 
         if (to) {
-            JFileChooser dirChooser = new JFileChooser();
-            dirChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-            dirChooser.setCurrentDirectory(inputFile);
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            fileChooser.setCurrentDirectory(inputFile);
+
+
+            // Set extension filter
+            fileChooser.setAcceptAllFileFilterUsed(true);
+            String codec = (String)cmbEncode.getSelectedItem();
+            List<String> lstExts = HiDataStreamFactory.getAbstractOutputStreamForCodec(codec).getExtensions();
+            String sExts = String.join(", ", lstExts);
+            fileChooser.setFileFilter(new FileFilter() {
+                @Override
+                public boolean accept(File f) {
+                    if (f.isDirectory()) {
+                        return true;
+                    }
+                    String ext = Utils.getFileExt(f);
+                    if (ext == null)
+                        return false;
+                    ext = ext.toLowerCase(Locale.ROOT);
+                    return lstExts.contains(ext);
+                }
+
+                @Override
+                public String getDescription() {
+                    return getString("input.filter.ext", sExts);
+                }
+            });
+
 
             // Show save file dialog
-            int res = dirChooser.showSaveDialog(this);
+            int res = fileChooser.showSaveDialog(this);
             if (res == JFileChooser.APPROVE_OPTION) {
-                file = dirChooser.getSelectedFile();
+                file = fileChooser.getSelectedFile();
             } else {
                 return;
             }
@@ -711,7 +786,6 @@ public class MainPanel extends JPanel {
                     File fTemp = null;
                     try {
                         Parameters p = buildParams(true);
-                        String sExt = Utils.getFileExt(fFile);
                         File outputFile = new File(fFile.getAbsolutePath());
                         if (fFile.equals(inputFile)) {
                             fTemp = new File(fFile.getAbsolutePath() + ".tmp");
@@ -725,9 +799,9 @@ public class MainPanel extends JPanel {
                         // in and out must not be the same file or the input file would be squizzed (length set to 0).
                         FileInputStream fis = new FileInputStream(fTemp);
                         FileOutputStream fos = new FileOutputStream(outputFile);
-                        HiDataAbstractOutputStream out = HiDataStreamFactory.createOutputStream(fis, fos, p, sExt);
+                        HiDataAbstractOutputStream out = HiDataStreamFactory.createOutputStream(fis, fos, p);
                         if (out == null)
-                            throw new Exception(getString("encoder.error.ext", sExt));
+                            throw new Exception(getString("encoder.error.codec", p.getCodec()));
                         bag.encryptAll(p);
                         out.write(bag.toByteArray());
                         out.close();
@@ -1187,6 +1261,12 @@ public class MainPanel extends JPanel {
         cmbEncode = new JComboBox<>(Utils.asArray(HiDataStreamFactory.getListCodecsOutput()));
         codecEncodePanel.add(cmbEncode);
         panelSelect.add(codecEncodePanel);
+        cmbEncode.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                TopEventDispatcher.getInstance().dispatch(new TopEventEvaluateSpace(inputFile, (String)cmbEncode.getSelectedItem()));
+            }
+        });
 
         JPanel panelBtn = new JPanel();
         panelBtn.setLayout(new FlowLayout());
@@ -1317,6 +1397,7 @@ public class MainPanel extends JPanel {
             e.printStackTrace();
         }
 
+        TopEventDispatcher.getInstance().addListener(this);
         refreshView();
     }
 
