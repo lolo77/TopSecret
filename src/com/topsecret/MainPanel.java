@@ -10,10 +10,7 @@ import com.secretlib.model.*;
 import com.secretlib.util.HiUtils;
 import com.secretlib.util.Log;
 import com.secretlib.util.Parameters;
-import com.topsecret.event.TopEventBase;
-import com.topsecret.event.TopEventDispatcher;
-import com.topsecret.event.TopEventEvaluateSpace;
-import com.topsecret.event.TopEventListener;
+import com.topsecret.event.*;
 import com.topsecret.model.DataItem;
 import com.topsecret.model.DataModel;
 import com.topsecret.plugin.PluginManager;
@@ -224,7 +221,7 @@ public class MainPanel extends JPanel implements TopEventListener {
         p.setHashAlgo((String) algo.getSelectedItem());
         p.setBitStart(iBitStart);
         p.setAutoExtendBit(bitExtend.isSelected());
-        p.setCodec((String)(encode ? cmbEncode.getSelectedItem() : cmbDecode.getSelectedItem()));
+        p.setCodec((String) (encode ? cmbEncode.getSelectedItem() : cmbDecode.getSelectedItem()));
 
         return p;
     }
@@ -319,6 +316,17 @@ public class MainPanel extends JPanel implements TopEventListener {
         if (e instanceof TopEventEvaluateSpace) {
             PluginManager.getInstance().dispatchPluginEvent(e);
             onEvaluateSpace((TopEventEvaluateSpace) e);
+        }
+        if (e instanceof TopEventInputFileChanged) {
+            TopEventInputFileChanged e2 = (TopEventInputFileChanged)e;
+            PluginManager.getInstance().dispatchPluginEvent(e);
+            TopEventDispatcher.getInstance().dispatch(new TopEventEvaluateSpace(e2.getFile(), (String) cmbEncode.getSelectedItem()));
+        }
+        if (e instanceof TopEventImageLoaded) {
+            PluginManager.getInstance().dispatchPluginEvent(e);
+        }
+        if (e instanceof TopEventAttachmentChanged) {
+            PluginManager.getInstance().dispatchPluginEvent(e);
         }
     }
 
@@ -439,12 +447,11 @@ public class MainPanel extends JPanel implements TopEventListener {
             }
         }
         SwingUtilities.invokeLater(() -> {
-            refreshView();
             ProgressCB progCB = (ProgressCB) p.getProgressCallBack();
             if (progCB.getLastMsgCapacity() != null) {
                 spaceCapacity = progCB.getLastMsgCapacity().getNbBitsTotals();
-                updateSpace();
             }
+            refreshView();
             progress.setVisible(false);
             progressStep.setText(file.getName());
         });
@@ -557,6 +564,7 @@ public class MainPanel extends JPanel implements TopEventListener {
                     loadSource(file);
                     cfg.updateLastOpenDir(file);
                     inputFile = file;
+                    TopEventDispatcher.getInstance().dispatch(new TopEventInputFileChanged(inputFile));
                 } catch (Exception e) {
                     SwingUtilities.invokeLater(() -> {
                         String msg = (e.getMessage() != null) ? getString("input.err.file.data", e.getMessage()) : getString("input.err.file.data");
@@ -732,7 +740,7 @@ public class MainPanel extends JPanel implements TopEventListener {
 
             // Set extension filter
             fileChooser.setAcceptAllFileFilterUsed(true);
-            String codec = (String)cmbEncode.getSelectedItem();
+            String codec = (String) cmbEncode.getSelectedItem();
             List<String> lstExts = HiDataStreamFactory.getAbstractOutputStreamForCodec(codec).getExtensions();
             String sExts = String.join(", ", lstExts);
             fileChooser.setFileFilter(new FileFilter() {
@@ -937,7 +945,7 @@ public class MainPanel extends JPanel implements TopEventListener {
                         JOptionPane.ERROR_MESSAGE);
             });
         }
-
+        TopEventDispatcher.getInstance().dispatch(new TopEventAttachmentChanged());
         refreshView();
         updateSpace();
     }
@@ -1264,7 +1272,7 @@ public class MainPanel extends JPanel implements TopEventListener {
         cmbEncode.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                TopEventDispatcher.getInstance().dispatch(new TopEventEvaluateSpace(inputFile, (String)cmbEncode.getSelectedItem()));
+                TopEventDispatcher.getInstance().dispatch(new TopEventEvaluateSpace(inputFile, (String) cmbEncode.getSelectedItem()));
             }
         });
 
@@ -1301,7 +1309,7 @@ public class MainPanel extends JPanel implements TopEventListener {
         });
 
         JPanel panelBtn2 = new JPanel();
-        panelBtn2.setLayout(new BorderLayout(5,5));
+        panelBtn2.setLayout(new BorderLayout(5, 5));
 
         btnEncode = new JButton(getString("btn.encode"));
         panelBtn2.add(btnEncode, BorderLayout.NORTH);
@@ -1326,7 +1334,7 @@ public class MainPanel extends JPanel implements TopEventListener {
         panelBtn.add(panelBtn2);
 
         JPanel panelBtn3 = new JPanel();
-        panelBtn3.setLayout(new BorderLayout(5,5));
+        panelBtn3.setLayout(new BorderLayout(5, 5));
 
         btnDecodeTo = new JButton(getString("btn.decode"));
         panelBtn3.add(btnDecodeTo, BorderLayout.NORTH);
@@ -1421,7 +1429,7 @@ public class MainPanel extends JPanel implements TopEventListener {
             }
             if (!bVisible) {
                 // Reset position to main screen
-                cfg.getFrameRect().move(0,0);
+                cfg.getFrameRect().move(0, 0);
             }
             getParent().getParent().getParent().getParent().setBounds(cfg.getFrameRect());
         } catch (Exception e) {

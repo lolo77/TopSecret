@@ -53,15 +53,22 @@ public class PluginManager {
         }
 
         File f = new File(jarPath);
-        File[] jars = f.listFiles(new FilenameFilter() {
-            @Override
-            public boolean accept(File dir, String name) {
-                return name.endsWith(".jar");
-            }
-        });
+        if (!f.isDirectory()) {
+            f = f.getParentFile();
+        }
+        if ((f != null) && (f.isDirectory())) {
+            File[] jars = f.listFiles(new FilenameFilter() {
+                @Override
+                public boolean accept(File dir, String name) {
+                    return name.endsWith(".jar");
+                }
+            });
 
-        for (File jar : jars) {
-            loadPlugin(jar.getName());
+            if (jars != null) {
+                for (File jar : jars) {
+                    loadPlugin(jar.getName());
+                }
+            }
         }
     }
 
@@ -92,7 +99,6 @@ public class PluginManager {
             LOG.debug(e.getMessage());
         }
     }
-
 
 
     public void startAll() {
