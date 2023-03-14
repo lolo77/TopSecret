@@ -13,6 +13,8 @@ import com.secretlib.util.Parameters;
 import com.topsecret.event.*;
 import com.topsecret.model.DataItem;
 import com.topsecret.model.DataModel;
+import com.topsecret.pexels.PexelsClient;
+import com.topsecret.pexels.PexelsPhoto;
 import com.topsecret.plugin.PluginManager;
 import com.topsecret.server.DataServer;
 import com.topsecret.util.*;
@@ -88,16 +90,19 @@ public class MainPanel extends JPanel implements TopEventListener {
     JTable tableData;
     private final DataModel data = new DataModel(this);
 
-    private Config cfg = new Config();
+
     private int defaultAlgoIdx;
     private HiDataBag bag = new HiDataBag();
     private int iBitStart;
     private File inputFile = null;
 
+    private JEditorPane lblPexelsLinks = null;
+
     private boolean showDlg = true;
 
     private int[] spaceCapacity = new int[8];
 
+    private static Config cfg = new Config();
 
     private DataServer dataServer = null;
 
@@ -318,7 +323,7 @@ public class MainPanel extends JPanel implements TopEventListener {
             onEvaluateSpace((TopEventEvaluateSpace) e);
         }
         if (e instanceof TopEventInputFileChanged) {
-            TopEventInputFileChanged e2 = (TopEventInputFileChanged)e;
+            TopEventInputFileChanged e2 = (TopEventInputFileChanged) e;
             PluginManager.getInstance().dispatchPluginEvent(e);
             TopEventDispatcher.getInstance().dispatch(new TopEventEvaluateSpace(e2.getFile(), (String) cmbEncode.getSelectedItem()));
         }
@@ -369,6 +374,8 @@ public class MainPanel extends JPanel implements TopEventListener {
             msgs.put(ProgressStepEnum.ENCODE, getString("process.encode"));
             msgs.put(ProgressStepEnum.READ, getString("process.read"));
             msgs.put(ProgressStepEnum.WRITE, getString("process.write"));
+            msgs.put(ProgressStepEnum.DOWNLOAD, getString("process.download"));
+            msgs.put(ProgressStepEnum.UPLOAD, getString("process.upload")); // Not used
         }
 
         @Override
@@ -387,7 +394,7 @@ public class MainPanel extends JPanel implements TopEventListener {
     }
 
 
-    private void loadSource(File file) throws TruncatedBagException {
+    private void loadSource(File file, boolean fromPexels) throws TruncatedBagException {
         Parameters p = buildParams(false);
 
         SwingUtilities.invokeLater(() -> {
@@ -411,7 +418,7 @@ public class MainPanel extends JPanel implements TopEventListener {
                 bag = newBag;
                 bag.decryptAll(p);
 
-                if (showDlg) {
+                if ((!fromPexels) && (showDlg)) {
                     SwingUtilities.invokeLater(() -> {
                         JOptionPane.showMessageDialog(MainPanel.this,
                                 getString("input.info.found"),
@@ -424,7 +431,7 @@ public class MainPanel extends JPanel implements TopEventListener {
             truncated = true;
         } catch (NoBagException e) {
             // No bag
-            if (showDlg) {
+            if ((!fromPexels) && (showDlg)) {
                 SwingUtilities.invokeLater(() -> {
                     JOptionPane.showMessageDialog(MainPanel.this,
                             getString("input.info.notFound"),
@@ -432,6 +439,9 @@ public class MainPanel extends JPanel implements TopEventListener {
                             JOptionPane.INFORMATION_MESSAGE);
                 });
             }
+            String ext = Utils.getFileExt(file);
+            ext = ext.toLowerCase();
+            selectOutputCodec(HiDataStreamFactory.getSupportedOutputCodecForExtension(ext));
         } catch (Exception e) {
             JOptionPane.showMessageDialog(MainPanel.this,
                     getString("input.err.file.data", e.getMessage()),
@@ -499,7 +509,7 @@ public class MainPanel extends JPanel implements TopEventListener {
 
         if (res == JFileChooser.APPROVE_OPTION) {
             File file = fileChooser.getSelectedFile();
-            onRefreshImage(file);
+            onRefreshImage(file, false);
         }
     }
 
@@ -520,7 +530,7 @@ public class MainPanel extends JPanel implements TopEventListener {
     }
 
 
-    public void onRefreshImage(File file) {
+    public void onRefreshImage(File file, boolean fromPexels) {
         if ((file == null) || (!file.exists()) || (file.isDirectory()))
             return;
 
@@ -561,8 +571,10 @@ public class MainPanel extends JPanel implements TopEventListener {
                             // NO OP
                         }
                     });
-                    loadSource(file);
-                    cfg.updateLastOpenDir(file);
+                    loadSource(file, fromPexels);
+                    if (!fromPexels) {
+                        cfg.updateLastOpenDir(file);
+                    }
                     inputFile = file;
                     TopEventDispatcher.getInstance().dispatch(new TopEventInputFileChanged(inputFile));
                 } catch (Exception e) {
@@ -1013,7 +1025,7 @@ public class MainPanel extends JPanel implements TopEventListener {
     }
 
     public void setInputImage(File img) {
-        onRefreshImage(img);
+        onRefreshImage(img, false);
         scrollPane.invalidate();
     }
 
@@ -1048,6 +1060,57 @@ public class MainPanel extends JPanel implements TopEventListener {
 
     public Config getCfg() {
         return cfg;
+    }
+
+
+    private void updatePexelsLinks(PexelsPhoto p) {
+        String html = "<html><div style='width:100%;text-align:center'><a href=\"https://www.pexels.com\">Photos provided by Pexels</a>";
+
+        if (p != null) {
+            html += "<br/>";
+            html += "<a href=\"" + p.getUrl() + "\">";
+            html += p.getDescription();
+            html += "<br/>";
+            html += p.getPhotographer();
+            html += "</a>";
+        }
+        html += "</div></html>";
+        lblPexelsLinks.setText(html);
+    }
+
+
+    private void onQueryPexels() {
+        PexelsClient pc = PexelsClient.getInstance();
+        Parameters p = buildParams(false);
+        Thread runner = new Thread() {
+            public void run() {
+                PexelsPhoto photo = pc.getRandomImage(p.getProgressCallBack());
+                if (photo == null) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(MainPanel.this, getString("pexels.err.message"), getString("pexels.err.title"), JOptionPane.ERROR_MESSAGE);
+                    });
+                    return;
+                }
+                byte[] buf = photo.getOriginal();
+                if (buf == null) {
+                    // Con not be null at this point
+                    LOG.error("Could not retrieve random image from pexels.com");
+                    return;
+                }
+                File f = new File("PexelsRandom.jpg");
+                FileOutputStream fo = null;
+                try {
+                    fo = new FileOutputStream(f);
+                    fo.write(buf);
+                    fo.close();
+                    onRefreshImage(f, true);
+                    updatePexelsLinks(photo);
+                } catch (Exception e) {
+                    LOG.error(e.getMessage());
+                }
+            }
+        };
+        runner.start();
     }
 
 
@@ -1109,7 +1172,7 @@ public class MainPanel extends JPanel implements TopEventListener {
         btnRefreshImage.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                onRefreshImage(inputFile);
+                onRefreshImage(inputFile, false);
             }
         });
 
@@ -1162,8 +1225,12 @@ public class MainPanel extends JPanel implements TopEventListener {
         // TODO : toggle visibility through an "advanced settings" accordion
         paramPanel.setVisible(false);
 
+        JPanel panelInputImg = new JPanel();
+        panelInputImg.setLayout(new BoxLayout(panelInputImg, BoxLayout.X_AXIS));
+        add(panelInputImg);
+
         JPanel panelSelect = new JPanel();
-        add(panelSelect);
+        panelInputImg.add(panelSelect);
         panelSelect.setLayout(new BoxLayout(panelSelect, BoxLayout.Y_AXIS));
 
 
@@ -1196,8 +1263,74 @@ public class MainPanel extends JPanel implements TopEventListener {
             }
         });
 
+
+        JPanel panelPexel = new JPanel();
+        panelInputImg.add(panelPexel);
+        panelPexel.setLayout(new BoxLayout(panelPexel, BoxLayout.Y_AXIS));
+
+        lblPexelsLinks = new JEditorPane();
+        panelPexel.add(lblPexelsLinks);
+
+        lblPexelsLinks.setContentType("text/html");
+        lblPexelsLinks.setEditable(false);
+        lblPexelsLinks.setBackground(getBackground());
+        lblPexelsLinks.setFont(getFont().deriveFont(Font.BOLD, 15));
+        updatePexelsLinks(null);
+        lblPexelsLinks.addHyperlinkListener(new HyperlinkListener() {
+            @Override
+            public void hyperlinkUpdate(HyperlinkEvent e) {
+                if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
+                    try {
+                        Desktop.getDesktop().browse(e.getURL().toURI());
+                    } catch (IOException | URISyntaxException ex) {
+                        // NO OP
+                    }
+                }
+            }
+        });
+
+        JPanel panelPexelsConfig = new JPanel();
+        panelPexelsConfig.setLayout(new BoxLayout(panelPexelsConfig, BoxLayout.Y_AXIS));
+
+        CoolJTextField txtPexelsApiKey = new CoolJTextField(15);
+        panelPexelsConfig.add(txtPexelsApiKey);
+        String sPexelsApiKey = cfg.getExtendedCfg().getProperty(PexelsClient.CFG_EXT_PEXELS_API_KEY);
+        if (sPexelsApiKey != null) {
+            txtPexelsApiKey.setText(sPexelsApiKey);
+        } else {
+            txtPexelsApiKey.setText(getString("pexels.lbl.apikey"));
+        }
+
+        txtPexelsApiKey.addPropertyChangeListener((e) -> {
+            cfg.getExtendedCfg().setProperty(PexelsClient.CFG_EXT_PEXELS_API_KEY, txtPexelsApiKey.getText());
+        });
+        CoolJTextField txtPexelsThemeKeyword = new CoolJTextField(15);
+        panelPexelsConfig.add(txtPexelsThemeKeyword);
+        panelPexel.add(panelPexelsConfig);
+
+        txtPexelsThemeKeyword.addPropertyChangeListener((e) -> {
+            cfg.getExtendedCfg().setProperty(PexelsClient.CFG_EXT_PEXELS_THEME, txtPexelsThemeKeyword.getText());
+        });
+
+        String sPexelsTheme = cfg.getExtendedCfg().getProperty(PexelsClient.CFG_EXT_PEXELS_THEME);
+        if (sPexelsTheme != null) {
+            txtPexelsThemeKeyword.setText(sPexelsTheme);
+        } else {
+            txtPexelsThemeKeyword.setText(getString("pexels.lbl.theme"));
+        }
+
+        JButton btnQueryPexels = new JButton(getString("pexels.btn.query"));
+        panelPexel.add(btnQueryPexels);
+        btnQueryPexels.addActionListener((e) -> {
+            onQueryPexels();
+        });
+
+        JPanel verticalPanel = new JPanel();
+        verticalPanel.setLayout(new BoxLayout(verticalPanel, BoxLayout.Y_AXIS));
+        add(verticalPanel);
+
         JLabel lblDragInTable = new JLabel(getString("label.dnd.table"));
-        panelSelect.add(lblDragInTable);
+        verticalPanel.add(lblDragInTable);
         lblDragInTable.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         tableData = new JTable(data);
@@ -1205,7 +1338,7 @@ public class MainPanel extends JPanel implements TopEventListener {
         scrollPane = new JScrollPane(tableData);
         tableData.setFillsViewportHeight(true);
         tableData.setAutoResizeMode(JTable.AUTO_RESIZE_NEXT_COLUMN);
-        panelSelect.add(scrollPane);
+        verticalPanel.add(scrollPane);
         scrollPane.setAlignmentX(Component.CENTER_ALIGNMENT);
         scrollPane.setPreferredSize(new Dimension(230, 100));
 
@@ -1268,7 +1401,7 @@ public class MainPanel extends JPanel implements TopEventListener {
         codecEncodePanel.add(lblCodecEncoder);
         cmbEncode = new JComboBox<>(Utils.asArray(HiDataStreamFactory.getListCodecsOutput()));
         codecEncodePanel.add(cmbEncode);
-        panelSelect.add(codecEncodePanel);
+        verticalPanel.add(codecEncodePanel);
         cmbEncode.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -1278,7 +1411,7 @@ public class MainPanel extends JPanel implements TopEventListener {
 
         JPanel panelBtn = new JPanel();
         panelBtn.setLayout(new FlowLayout());
-        panelSelect.add(panelBtn);
+        verticalPanel.add(panelBtn);
         panelBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         btnNew = new JButton(getString("btn.data.new"));
@@ -1361,28 +1494,28 @@ public class MainPanel extends JPanel implements TopEventListener {
 
 
         lblSpaceTotal = new JLabel();
-        panelSelect.add(lblSpaceTotal);
+        verticalPanel.add(lblSpaceTotal);
         lblSpaceTotal.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         lblSpaceUsed = new JLabel();
-        panelSelect.add(lblSpaceUsed);
+        verticalPanel.add(lblSpaceUsed);
         lblSpaceUsed.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblSpaceUsed.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
 
 
         lblSpaceFree = new JLabel();
-        panelSelect.add(lblSpaceFree);
+        verticalPanel.add(lblSpaceFree);
         lblSpaceFree.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblSpaceFree.setBorder(BorderFactory.createEmptyBorder(2, 0, 5, 0));
 
         lblAltFact = new JLabel();
-        panelSelect.add(lblAltFact);
+        verticalPanel.add(lblAltFact);
         lblAltFact.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblAltFact.setOpaque(true);
         lblAltFact.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
         JButton btnAbout = new JButton(getString("btn.about"));
-        panelSelect.add(btnAbout);
+        verticalPanel.add(btnAbout);
         btnAbout.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnAbout.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         btnAbout.setFont(btnAbout.getFont().deriveFont(Font.BOLD, 12));
@@ -1409,6 +1542,9 @@ public class MainPanel extends JPanel implements TopEventListener {
         refreshView();
     }
 
+    public static Config getConfig() {
+        return cfg;
+    }
 
     public void loadConfig() {
         cfg = new Config();

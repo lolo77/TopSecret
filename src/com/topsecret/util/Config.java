@@ -3,6 +3,7 @@ package com.topsecret.util;
 
 import java.awt.*;
 import java.io.File;
+import java.util.Properties;
 
 public class Config {
 
@@ -12,6 +13,8 @@ public class Config {
     private String lastOpenDir;
     private Rectangle frameRect;
     private String lang;
+
+    private Properties extendedCfg = new Properties();
 
     public String getAlgo() {
         return algo;
@@ -74,5 +77,13 @@ public class Config {
 
     public void updateLastOpenDir(File file) {
         setLastOpenDir(getPath(file.getAbsolutePath()));
+    }
+
+    public Properties getExtendedCfg() {
+        return extendedCfg;
+    }
+
+    public void setExtendedCfg(Properties extendedCfg) {
+        this.extendedCfg = extendedCfg;
     }
 }

@@ -1,9 +1,16 @@
 package com.topsecret.util;
 
+import com.secretlib.model.IProgressCallback;
+import com.secretlib.model.ProgressMessage;
+import com.secretlib.model.ProgressStepEnum;
+
 import javax.swing.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Set;
@@ -75,5 +82,27 @@ public class Utils {
             tab[i++] = s;
         }
         return tab;
+    }
+
+    public static byte[] readAllBytesProgress(InputStream in, int expectedSize, IProgressCallback cb) throws IOException {
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        byte[] tmp = new byte[4096];
+
+        ProgressMessage pm = new ProgressMessage(ProgressStepEnum.DOWNLOAD, 0);
+        int iRead;
+        int totalRead = 0;
+        int lastUpdate = 0;
+        while((iRead = in.read(tmp)) > 0) {
+            buf.write(tmp, 0, iRead);
+            totalRead += iRead;
+            if ((cb != null) && (totalRead - lastUpdate >= 128 * 1024)) {
+                // Update every 128kiB
+                lastUpdate = totalRead;
+                pm.setProgress((double)((double)totalRead / (double)expectedSize));
+                cb.update(pm);
+            }
+        }
+
+        return buf.toByteArray();
     }
 }

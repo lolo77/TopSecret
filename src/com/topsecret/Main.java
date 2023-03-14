@@ -2,6 +2,7 @@ package com.topsecret;
 
 import com.secretlib.util.Log;
 import com.topsecret.plugin.PluginManager;
+import com.topsecret.util.Config;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -28,6 +29,8 @@ public class Main extends JFrame {
     private String hash = null;
     private boolean showDlg = true;
 
+    private Config cfg = new Config();
+
     public Main(String[] args) {
 
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -44,7 +47,7 @@ public class Main extends JFrame {
         MainPanel mp = new MainPanel(this);
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(mp, BorderLayout.CENTER);
-        setSize(450, 560);
+        setSize(530, 660);
         mp.loadConfig();
         parseArgs(args);
         PluginManager.getInstance().discoverPlugins();
