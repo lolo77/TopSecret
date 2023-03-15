@@ -36,4 +36,8 @@ public class PexelsResult {
         }
         return null;
     }
+
+    public int getNbResultsTotal() {
+        return nbResultsTotal;
+    }
 }

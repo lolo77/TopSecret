@@ -63,6 +63,7 @@ public class MainPanel extends JPanel implements TopEventListener {
     JButton btnSelectImage;
     JButton btnRefreshImage;
     JButton btnRefreshData;
+    JButton btnQueryPexels;
     JButton btnEncode;
     JButton btnEncodeTo;
     JButton btnDecodeTo;
@@ -1086,6 +1087,7 @@ public class MainPanel extends JPanel implements TopEventListener {
     private void onQueryPexels() {
         PexelsClient pc = PexelsClient.getInstance();
         Parameters p = buildParams(false);
+        btnQueryPexels.setEnabled(false);
         Thread runner = new Thread() {
             public void run() {
                 PexelsPhoto photo = pc.getRandomImage(p.getProgressCallBack());
@@ -1093,12 +1095,14 @@ public class MainPanel extends JPanel implements TopEventListener {
                     SwingUtilities.invokeLater(() -> {
                         JOptionPane.showMessageDialog(MainPanel.this, getString("pexels.err.message"), getString("pexels.err.title"), JOptionPane.ERROR_MESSAGE);
                     });
+                    btnQueryPexels.setEnabled(true);
                     return;
                 }
                 byte[] buf = photo.getOriginal();
                 if (buf == null) {
                     // Con not be null at this point
                     LOG.error("Could not retrieve random image from pexels.com");
+                    btnQueryPexels.setEnabled(true);
                     return;
                 }
                 File f = new File("PexelsRandom.jpg");
@@ -1112,6 +1116,7 @@ public class MainPanel extends JPanel implements TopEventListener {
                 } catch (Exception e) {
                     LOG.error(e.getMessage());
                 }
+                btnQueryPexels.setEnabled(true);
             }
         };
         runner.start();
@@ -1323,7 +1328,7 @@ public class MainPanel extends JPanel implements TopEventListener {
             txtPexelsThemeKeyword.setText(getString("pexels.lbl.theme"));
         }
 
-        JButton btnQueryPexels = new JButton(getString("pexels.btn.query"));
+        btnQueryPexels = new JButton(getString("pexels.btn.query"));
         panelPexel.add(btnQueryPexels);
         btnQueryPexels.addActionListener((e) -> {
             onQueryPexels();

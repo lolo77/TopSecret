@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 public class PexelsClient {
@@ -38,7 +39,7 @@ public class PexelsClient {
     }
 
 
-    private PexelsResult query(String theme) {
+    private PexelsResult query(String theme, int page) {
         String apiKey = MainPanel.getConfig().getExtendedCfg().getProperty(CFG_EXT_PEXELS_API_KEY);
         if (apiKey == null) {
             LOG.warn("Pexels API key is not defined.");
@@ -51,7 +52,10 @@ public class PexelsClient {
             if ((theme == null) || (theme.length() == 0)) {
                 theme = "nature";
             }
-            String uri = "https://api.pexels.com/v1/search?query=" + theme;
+            String uri = "https://api.pexels.com/v1/search?query=" + URLEncoder.encode(theme, StandardCharsets.UTF_8.name());
+            if (page > 0) {
+                uri += "&page=" + page;
+            }
             LOG.debug("Calling URL " + uri);
 
             URL url = new URL(uri);
@@ -80,7 +84,7 @@ public class PexelsClient {
     public PexelsPhoto getRandomImage(IProgressCallback cb) {
 
         String theme = MainPanel.getConfig().getExtendedCfg().getProperty(CFG_EXT_PEXELS_THEME);
-        PexelsResult res = query(theme);
+        PexelsResult res = query(theme, 0);
 
         if ((res == null) || (res.getPerPage() == 0)) {
             LOG.error("Nothing returned");
@@ -89,12 +93,15 @@ public class PexelsClient {
 
         byte[] buf = null;
 
-        int nb = res.getPerPage();
+        int nb = res.getNbResultsTotal();
 
         int idx = (int) ((double) Math.random() * nb);
         LOG.debug("returning idx " + idx);
 
-        PexelsPhoto photo = res.getPhoto(idx);
+        int page = (idx / res.getPerPage()) + 1;
+        res = query(theme, page);
+
+        PexelsPhoto photo = res.getPhoto(idx % res.getPerPage());
         String uri = photo.getOriginalUrl();
         LOG.debug("uri : " + uri);
 
