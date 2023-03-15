@@ -1067,9 +1067,13 @@ public class MainPanel extends JPanel implements TopEventListener {
         String html = "<html><div style='width:100%;text-align:center'><a href=\"https://www.pexels.com\">Photos provided by Pexels</a>";
 
         if (p != null) {
+            String sDesc = p.getDescription();
+            if (sDesc.length() > 25) {
+                sDesc = sDesc.substring(0, 25) + "...";
+            }
             html += "<br/>";
             html += "<a href=\"" + p.getUrl() + "\">";
-            html += p.getDescription();
+            html += sDesc;
             html += "<br/>";
             html += p.getPhotographer();
             html += "</a>";
