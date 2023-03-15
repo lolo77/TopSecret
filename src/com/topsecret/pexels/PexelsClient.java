@@ -56,6 +56,9 @@ public class PexelsClient {
 
             URL url = new URL(uri);
             HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
+            httpConn.setRequestProperty("Accept", "application/json");
+            httpConn.setRequestProperty("Content-Type", "application/json");
+            httpConn.setRequestProperty("User-Agent", "Pexels/JavaScript");
             httpConn.setRequestProperty("Authorization", apiKey);
 
             byte[] buf = HiUtils.readAllBytes(httpConn.getInputStream());
@@ -100,10 +103,10 @@ public class PexelsClient {
         try {
             URL url = new URL(uri);
             HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
+            httpConn.setRequestProperty("Accept", "application/json");
+            httpConn.setRequestProperty("Content-Type", "application/json");
+            httpConn.setRequestProperty("User-Agent", "Pexels/JavaScript");
             httpConn.setRequestProperty("Authorization", apiKey);
-            httpConn.setRequestProperty("accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
-            httpConn.setRequestProperty("accept-encoding", "gzip, deflate, br");
-            httpConn.setRequestProperty("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36");
 
             int expectedSize = httpConn.getContentLength();
 
