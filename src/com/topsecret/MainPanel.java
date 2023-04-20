@@ -1272,9 +1272,24 @@ public class MainPanel extends JPanel implements TopEventListener {
             }
         });
 
+        JPanel panelPexelsY = new JPanel();
+        panelInputImg.add(panelPexelsY);
+        panelPexelsY.setLayout(new BoxLayout(panelPexelsY, BoxLayout.Y_AXIS));
+
+        JButton btnPexels = new JButton(getString("pexels.btn.toggle"));
+        panelPexelsY.add(btnPexels);
 
         JPanel panelPexel = new JPanel();
-        panelInputImg.add(panelPexel);
+        panelPexel.setVisible(false);
+
+        btnPexels.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                panelPexel.setVisible(!panelPexel.isVisible());
+            }
+        });
+
+        panelPexelsY.add(panelPexel);
         panelPexel.setLayout(new BoxLayout(panelPexel, BoxLayout.Y_AXIS));
 
         lblPexelsLinks = new JEditorPane();
