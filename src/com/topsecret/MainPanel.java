@@ -41,6 +41,7 @@ import java.beans.XMLEncoder;
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.List;
@@ -1012,12 +1013,38 @@ public class MainPanel extends JPanel implements TopEventListener {
                 dlg.setSize(600, 600);
                 dlg.toFront();
                 dlg.setVisible(true);
-            } else {
-                // View other items via the default navigator
-                // --> avoid writing secret data to a temp file before opening the default app
+            } else
+            {
                 if (dataServer != null) {
+                    String sUri = "http://127.0.0.1:" + dataServer.getPort() + "/";
+                    URI uri = new URI(sUri);
                     dataServer.setData(cd.getData());
-                    Desktop.getDesktop().browse(new URI("http://127.0.0.1:" + dataServer.getPort() + "/"));
+
+                    boolean bPng = cd.getName().toLowerCase().endsWith(".png");
+                    boolean bJpg = cd.getName().toLowerCase().endsWith(".jpg");
+                    boolean bJpeg = cd.getName().toLowerCase().endsWith(".jpeg");
+                    boolean bBmp = cd.getName().toLowerCase().endsWith(".bmp");
+                    boolean bGif = cd.getName().toLowerCase().endsWith(".gif");
+                    if ((bPng) || (bJpg) || (bJpeg) || (bBmp) || (bGif)) {
+                        // View images in an inner UI component
+                        JDialog dlg = new JDialog(frame, cd.getName(), false);
+                        dlg.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+                        dlg.setLayout(new BorderLayout());
+                        JScrollPane scroll = new JScrollPane();
+                        dlg.add(scroll, BorderLayout.CENTER);
+                        Icon icon = new ImageIcon(new URL(sUri));
+                        JLabel p = new JLabel(icon);
+                        scroll.setViewportView(p);
+                        dlg.setSize(600, 600);
+                        dlg.toFront();
+                        dlg.setVisible(true);
+                    } else {
+                        // View other items via the default navigator
+                        // --> avoid writing secret data to a temp file before opening the default app
+                        Desktop.getDesktop().browse(uri);
+                    }
+                } else {
+                    LOG.warn("handleDoubleClick : dataServer is null. Can not display content.");
                 }
             }
         } catch (Exception ex) {
