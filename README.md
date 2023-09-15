@@ -9,7 +9,7 @@ Store securely...
 - **crypto keys**
 - **seed phrases**
 - transmit mail-filtered files
-- share multi-secret file infos
+- share multi-secret file info
 
 ...into some *innocent* vacation or family photos or any PDF document.
 -> It can now be stored in the cloud and kept **secure** !
@@ -17,8 +17,8 @@ Store securely...
 ## Strong encryption and low-noise generation
 Strong encryption (AES) along with strong hash algo (SHA-512 by default, customizable)
 
-The image encoding process uses a semi-random positional algo to place the bit stream into the piture's items at low-level noise.
-The PDF encoding inserts new keys into internal maps. No visual impact, no embedded files. Even PDF editors do not show these infos.
+The image encoding process uses a semi-random positional algo to place the bit stream into the picture's items at low-level noise.
+The PDF encoding inserts new keys into internal maps. No visual impact, no embedded files. Even PDF editors do not show these info.
 
 ## Works for both JPEG & PNG images and PDF documents.
 Retrieve your secrets with 2 security factors :
