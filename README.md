@@ -27,9 +27,6 @@ Retrieve your secrets with 2 security factors :
 
 ## Visit the Github Wiki : <https://github.com/lolo77/TopSecret/wiki>
 
-## Join us on Telegram
-https://t.me/s/topsecret_projects
-
 ## Visit our decentralized website
 [top-secret.dao](http://top-secret.dao/)
 
