@@ -1016,7 +1016,7 @@ public class MainPanel extends JPanel implements TopEventListener {
             } else
             {
                 if (dataServer != null) {
-                    String sUri = "http://127.0.0.1:" + dataServer.getPort() + "/";
+                    String sUri = "http://127.0.0.1:" + dataServer.getPort() + "/" + cd.getName();
                     URI uri = new URI(sUri);
                     dataServer.setData(cd.getData());
 
@@ -1035,7 +1035,7 @@ public class MainPanel extends JPanel implements TopEventListener {
                         Icon icon = new ImageIcon(new URL(sUri));
                         JLabel p = new JLabel(icon);
                         scroll.setViewportView(p);
-                        dlg.setSize(600, 600);
+                        dlg.setSize(icon.getIconWidth(), icon.getIconHeight());
                         dlg.toFront();
                         dlg.setVisible(true);
                     } else {
